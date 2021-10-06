@@ -1,0 +1,10 @@
+AddonId: Nintendo
+Packages:
+  - Version: 1.0
+    RequiredApiVersion: 6.0.0
+    ReleaseDate: 2021-10-06
+    PackageUrl: https://github.com/XenorPLxx/playnite-library-nintendo/releases/download/1.0/NintendoLibrary_1_0.pext
+    Changelog:
+      - Playnite 9 support
+      - Added Nintendo authentication
+      - Added download of digital Nintendo purchases
