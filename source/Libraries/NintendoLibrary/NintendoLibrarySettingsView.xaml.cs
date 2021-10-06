@@ -13,11 +13,11 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace PSNLibrary
+namespace NintendoLibrary
 {
-    public partial class PSNLibrarySettingsView : UserControl
+    public partial class NintendoLibrarySettingsView : UserControl
     {
-        public PSNLibrarySettingsView()
+        public NintendoLibrarySettingsView()
         {
             InitializeComponent();
         }

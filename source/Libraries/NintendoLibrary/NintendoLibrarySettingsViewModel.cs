@@ -1,5 +1,5 @@
 ﻿using Playnite.SDK;
-using PSNLibrary.Services;
+using NintendoLibrary.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,23 +7,16 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PSNLibrary
+namespace NintendoLibrary
 {
-    public class PSNLibrarySettings
+    public class NintendoLibrarySettings
     {
         public bool ConnectAccount { get; set; } = true;
-        public bool DownloadImageMetadata { get; set; } = true;
-        public bool LastPlayed{ get; set; } = false;
-        public bool Playtime { get; set; } = false;
-        public bool PS3 { get; set; } = true;
-        public bool PSP { get; set; } = true;
-        public bool PSVITA { get; set; } = true;
-        public bool Migration { get; set; } = true;
     }
 
-    public class PSNLibrarySettingsViewModel : PluginSettingsViewModel<PSNLibrarySettings, PSNLibrary>
+    public class NintendoLibrarySettingsViewModel : PluginSettingsViewModel<NintendoLibrarySettings, NintendoLibrary>
     {
-        private PSNAccountClient clientApi;
+        private NintendoAccountClient clientApi;
 
         public bool IsUserLoggedIn
         {
@@ -49,9 +42,9 @@ namespace PSNLibrary
             });
         }
 
-        public PSNLibrarySettingsViewModel(PSNLibrary plugin, IPlayniteAPI api) : base(plugin, api)
+        public NintendoLibrarySettingsViewModel(NintendoLibrary plugin, IPlayniteAPI api) : base(plugin, api)
         {
-            clientApi = new PSNAccountClient(plugin, api);
+            clientApi = new NintendoAccountClient(plugin, api);
             var savedSettings = LoadSavedSettings();
             if (savedSettings != null)
             {
@@ -59,7 +52,7 @@ namespace PSNLibrary
             }
             else
             {
-                Settings = new PSNLibrarySettings();
+                Settings = new NintendoLibrarySettings();
             }
         }
 

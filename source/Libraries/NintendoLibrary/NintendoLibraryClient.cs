@@ -1,13 +1,10 @@
-﻿using Playnite;
-using Playnite.SDK;
-using Playnite.SDK.Events;
-using Playnite.SDK.Models;
+﻿using Playnite.SDK;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PSNLibrary
+namespace NintendoLibrary
 {
 }

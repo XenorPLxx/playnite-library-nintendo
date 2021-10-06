@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>PSNLibrary</RootNamespace>
-    <AssemblyName>PSNLibrary</AssemblyName>
+    <RootNamespace>NintendoLibrary</RootNamespace>
+    <AssemblyName>NintendoLibrary</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -151,16 +151,16 @@
     <Compile Include="..\..\Generic\PlayniteExtensions.Common\PluginSettingsViewModel.cs">
       <Link>Shared\PluginSettingsViewModel.cs</Link>
     </Compile>
-    <Compile Include="Models\PSNModels.cs" />
-    <Compile Include="PSNGameController.cs" />
-    <Compile Include="PSNLibraryClient.cs" />
-    <Compile Include="PSNLibrary.cs" />
-    <Compile Include="PSNLibrarySettingsViewModel.cs" />
-    <Compile Include="PSNLibrarySettingsView.xaml.cs">
-      <DependentUpon>PSNLibrarySettingsView.xaml</DependentUpon>
+    <Compile Include="Models\NintendoModels.cs" />
+    <Compile Include="NintendoGameController.cs" />
+    <Compile Include="NintendoLibraryClient.cs" />
+    <Compile Include="NintendoLibrary.cs" />
+    <Compile Include="NintendoLibrarySettingsViewModel.cs" />
+    <Compile Include="NintendoLibrarySettingsView.xaml.cs">
+      <DependentUpon>NintendoLibrarySettingsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Services\PSNAccountClient.cs" />
+    <Compile Include="Services\NintendoAccountClient.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="addon.yaml" />
@@ -185,7 +185,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="PSNLibrarySettingsView.xaml">
+    <Page Include="NintendoLibrarySettingsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

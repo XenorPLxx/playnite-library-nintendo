@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.1622
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31515.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Metadata", "Metadata", "{80CE6DFD-BE10-4777-8005-80F696AFBF4A}"
 EndProject
@@ -31,7 +31,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ItchioLibrary", "Libraries\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OriginLibrary", "Libraries\OriginLibrary\OriginLibrary.csproj", "{D0EFC813-C836-4167-A120-2DE785E140A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PSNLibrary", "Libraries\PSNLibrary\PSNLibrary.csproj", "{FB213CE8-F724-4366-9B19-A89030F0BAEF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NintendoLibrary", "Libraries\NintendoLibrary\NintendoLibrary.csproj", "{FB213CE8-F724-4366-9B19-A89030F0BAEF}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UplayLibrary", "Libraries\UplayLibrary\UplayLibrary.csproj", "{7DC1512C-5C82-434B-9675-12AD94B74C56}"
 EndProject
