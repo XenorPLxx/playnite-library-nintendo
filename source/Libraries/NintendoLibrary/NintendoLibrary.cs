@@ -66,16 +66,21 @@ namespace NintendoLibrary
             var parsedGames = new List<GameMetadata>();
             foreach (var title in gamesToParse)
             {
-                var gameName = FixGameName(title.title);
+                string[] nonGameContentTypes = { "consumable", "service", "aoc", "premium_ticket", "patch", "service_item" };
+                string[] gameContentTypes = { "title", "bundle" };
 
-                string platform = ParsePlatform(title.device_type);
+                if (!nonGameContentTypes.Any(s => title.content_type.Contains(s))) { 
+                    var gameName = FixGameName(title.title);
 
-                parsedGames.Add(new GameMetadata
-                {
-                    GameId = title.transaction_id.ToString(),
-                    Name = gameName,
-                    Platforms = new HashSet<MetadataProperty> { new MetadataSpecProperty(platform) }
-                });
+                    string platform = ParsePlatform(title.device_type);
+
+                    parsedGames.Add(new GameMetadata
+                    {
+                        GameId = title.transaction_id.ToString(),
+                        Name = gameName,
+                        Platforms = new HashSet<MetadataProperty> { new MetadataSpecProperty(platform) }
+                    });
+                }
             }
 
             return parsedGames;
