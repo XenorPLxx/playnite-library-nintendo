@@ -61,11 +61,11 @@ namespace NintendoLibrary.Services
                     }
                 };
 
-                //view.DeleteDomainCookies("ec.nintendo.com");
-                //view.DeleteDomainCookies("accounts.nintendo.com");
-                //view.DeleteDomainCookies("api.accounts.nintendo.com");
-                //view.DeleteDomainCookies("api.ec.nintendo.com");
-                //view.DeleteDomainCookies("apps.accounts.nintendo.com");
+                view.DeleteDomainCookies("ec.nintendo.com");
+                view.DeleteDomainCookies("accounts.nintendo.com");
+                view.DeleteDomainCookies("api.accounts.nintendo.com");
+                view.DeleteDomainCookies("api.ec.nintendo.com");
+                view.DeleteDomainCookies("apps.accounts.nintendo.com");
                 view.Navigate(loginUrl);
                 view.OpenDialog();
             }
