@@ -43,7 +43,11 @@ namespace NintendoLibrary
 
                 case "CTR":
                     platform = "nintendo_3ds";
-                    break;     
+                    break;
+
+                case "WUP":
+                    platform = "nintendo_wiiu";
+                    break;
 
                 default:
                     break;
@@ -78,7 +82,7 @@ namespace NintendoLibrary
                     {
                         GameId = title.transaction_id.ToString(),
                         Name = gameName,
-                        Platforms = new HashSet<MetadataProperty> { new MetadataSpecProperty(platform) }
+                        Platforms = platform != null ? new HashSet<MetadataProperty> { new MetadataSpecProperty(platform) } : null
                     });
                 }
             }
