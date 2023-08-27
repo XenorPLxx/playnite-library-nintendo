@@ -70,8 +70,8 @@ namespace NintendoLibrary
             var parsedGames = new List<GameMetadata>();
             foreach (var title in gamesToParse)
             {
-                string[] nonGameContentTypes = { "consumable", "service", "aoc", "premium_ticket", "patch", "service_item" };
-                string[] gameContentTypes = { "title", "bundle" };
+                string[] nonGameContentTypes = { "consumable", "service", "premium_ticket", "patch", "service_item" };
+                string[] gameContentTypes = { "title", "bundle", "aoc" };
 
                 if (!nonGameContentTypes.Any(s => title.content_type.Contains(s))) { 
                     var gameName = FixGameName(title.title);
