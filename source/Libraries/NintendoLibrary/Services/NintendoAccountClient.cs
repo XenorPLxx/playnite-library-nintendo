@@ -49,7 +49,7 @@ namespace NintendoLibrary.Services
             var loggedIn = false;
             
 
-            using (var view = api.WebViews.CreateView(580, 700))
+            using (var view = api.WebViews.CreateView(1100,800))
             {
                 view.LoadingChanged += (s, e) =>
                 {
