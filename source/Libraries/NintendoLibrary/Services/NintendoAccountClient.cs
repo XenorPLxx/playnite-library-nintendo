@@ -34,8 +34,8 @@ namespace NintendoLibrary.Services
         private readonly NintendoLibrary library;
         private readonly string tokenPath;
         private const int pageRequestLimit = 100;
-        private const string loginUrl = @"https://accounts.nintendo.com/login?post_login_redirect_uri=https%3A%2F%2Fec.nintendo.com/my%2F";        
-        private const string purchasesListUrl = "https://ec.nintendo.com/api/my/transactions?limit={0}&offset={1}";
+        private const string loginUrl = @"https://accounts.nintendo.com/login?post_login_redirect_uri=https%3A%2F%2Fec.nintendo.com/my%2F";
+        private const string purchasesListUrl = "https://ec.nintendo.com/api/my/transactions?offset={1}&limit={0}";
 
         public NintendoAccountClient(NintendoLibrary library, IPlayniteAPI api)
         {
