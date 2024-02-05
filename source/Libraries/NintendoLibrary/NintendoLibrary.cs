@@ -151,5 +151,15 @@ namespace NintendoLibrary
 
             return importedGames;
         }
+
+        public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
+        {
+            if (args.Game.PluginId != Id)
+            {
+                yield break;
+            }
+            PlayniteApi.Dialogs.ShowMessage("This will NOT work.\n\r\n\rInstalling Nintendo games from the Nintendo library plugin is not supported. It is not possible to play Nintendo games this way; the Nintendo plugin is designed as a library management tool only.\n\r\n\rPlay this game via a console or an emulator instead.");
     }
+
+  }
 }
