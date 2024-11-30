@@ -213,7 +213,7 @@ namespace NintendoLibrary.Services
             return titles;
         }
 
-        public void TryRefreshCookies()
+    private void TryRefreshCookies()
         {
             string address;
             using (var webView = api.WebViews.CreateOffscreenView())

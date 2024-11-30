@@ -1,5 +1,11 @@
 AddonId: NintendoLibrary
 Packages:
+  - Version: 1.8
+    RequiredApiVersion: 6.9.0
+    ReleaseDate: 2024-11-30
+    PackageUrl: https://github.com/XenorPLxx/playnite-library-nintendo/releases/download/1.8/NintendoLibrary_1_8.pext
+    Changelog:
+      -  Improves cookie refresh
   - Version: 1.7
     RequiredApiVersion: 6.9.0
     ReleaseDate: 2024-06-02
