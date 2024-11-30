@@ -63,6 +63,11 @@ namespace NintendoLibrary.Services
                     }
                 };
 
+                view.DeleteDomainCookies("https://ec.nintendo.com");
+                view.DeleteDomainCookies("https://accounts.nintendo.com");
+                view.DeleteDomainCookies("https://api.accounts.nintendo.com");
+                view.DeleteDomainCookies("https://api.ec.nintendo.co");
+                view.DeleteDomainCookies("https://apps.accounts.nintendo.com");
                 view.DeleteDomainCookies("ec.nintendo.com");
                 view.DeleteDomainCookies("accounts.nintendo.com");
                 view.DeleteDomainCookies("api.accounts.nintendo.com");
