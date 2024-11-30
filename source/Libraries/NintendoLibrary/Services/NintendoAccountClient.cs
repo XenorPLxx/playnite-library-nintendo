@@ -18,6 +18,7 @@ using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Net.Http.Headers;
 using System.Security;
+using System.Web.UI.WebControls;
 
 namespace NintendoLibrary.Services
 {
@@ -92,6 +93,10 @@ namespace NintendoLibrary.Services
             foreach (var cookie in cookies)
             {
                 if (cookie.Domain == "ec.nintendo.com")
+                {
+                    cookieContainer.Add(new Uri("https://ec.nintendo.com"), new Cookie(cookie.Name, cookie.Value));
+                }
+                if (cookie.Domain == "https://ec.nintendo.com")
                 {
                     cookieContainer.Add(new Uri("https://ec.nintendo.com"), new Cookie(cookie.Name, cookie.Value));
                 }
@@ -208,7 +213,7 @@ namespace NintendoLibrary.Services
             return titles;
         }
 
-        private void TryRefreshCookies()
+        public void TryRefreshCookies()
         {
             string address;
             using (var webView = api.WebViews.CreateOffscreenView())
@@ -218,19 +223,23 @@ namespace NintendoLibrary.Services
                     address = webView.GetCurrentAddress();
                     webView.Close();
                 };
-
                 webView.NavigateAndWait(loginUrl);
-            }
+      }
 
             using (var webView = api.WebViews.CreateOffscreenView())
             {
-              webView.LoadingChanged += (s, e) =>
-              {
-                address = webView.GetCurrentAddress();
-                webView.Close();
-              };
+                var loadingChanges = 0;
+                webView.LoadingChanged += (s, e) =>
+                {
+                    loadingChanges++;
+                    address = webView.GetCurrentAddress();
+                    if (loadingChanges > 0 && address == "https://ec.nintendo.com/my/transactions/1")
+                    {
+                      webView.Close();
+                    }                
+                };
 
-              webView.NavigateAndWait("https://ec.nintendo.com/my/transactions/1");
+                webView.NavigateAndWait("https://ec.nintendo.com/my/transactions/1");
             }
 
             dumpCookies();
