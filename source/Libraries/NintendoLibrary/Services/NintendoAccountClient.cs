@@ -35,7 +35,7 @@ namespace NintendoLibrary.Services
         private readonly NintendoLibrary library;
         private readonly string tokenPath;
         private const int pageRequestLimit = 100;
-        private const string loginUrl = @"https://accounts.nintendo.com/login?post_login_redirect_uri=https%3A%2F%2Faccounts.nintendo.com%2F";
+        private const string loginUrl = @"https://ec.nintendo.com/my/transactions/1";
         //private const string loginUrl = @"https://accounts.nintendo.com/login?post_login_redirect_uri=https%3A%2F%2Fec.nintendo.com%2Fmy%2Ftransactions%2F1";
         private const string purchasesListUrl = "https://ec.nintendo.com/api/my/transactions?offset={1}&limit={0}";
 
@@ -55,19 +55,18 @@ namespace NintendoLibrary.Services
             {
                 view.LoadingChanged += (s, e) =>
                 {
+                    if (e.IsLoading)
+                        return;
+
                     var address = view.GetCurrentAddress();
-                    if (address == "https://accounts.nintendo.com/")
+                    if (address == loginUrl)
                     {
                         loggedIn = true;
                         view.Close();
                     }
                 };
 
-                view.DeleteDomainCookies("https://ec.nintendo.com");
-                view.DeleteDomainCookies("https://accounts.nintendo.com");
-                view.DeleteDomainCookies("https://api.accounts.nintendo.com");
-                view.DeleteDomainCookies("https://api.ec.nintendo.co");
-                view.DeleteDomainCookies("https://apps.accounts.nintendo.com");
+                view.DeleteDomainCookies(".nintendo.com");
                 view.DeleteDomainCookies("ec.nintendo.com");
                 view.DeleteDomainCookies("accounts.nintendo.com");
                 view.DeleteDomainCookies("api.accounts.nintendo.com");
@@ -237,6 +236,9 @@ namespace NintendoLibrary.Services
                 var loadingChanges = 0;
                 webView.LoadingChanged += (s, e) =>
                 {
+                    if (e.IsLoading)
+                        return;
+
                     loadingChanges++;
                     address = webView.GetCurrentAddress();
                     if (loadingChanges > 0 && address == "https://ec.nintendo.com/my/transactions/1")
