@@ -35,11 +35,11 @@ namespace NintendoLibrary.Services
         private readonly NintendoLibrary library;
         private readonly string tokenPath;
         private const int pageRequestLimit = 100;
-        private const string loginUrl = @"https://accounts.nintendo.com/login?post_login_redirect_uri=https%3A%2F%2Faccounts.nintendo.com%2F";
+        private const string loginUrl = @"https://ec.nintendo.com/my/transactions/1";
         //private const string loginUrl = @"https://accounts.nintendo.com/login?post_login_redirect_uri=https%3A%2F%2Fec.nintendo.com%2Fmy%2Ftransactions%2F1";
         private const string purchasesListUrl = "https://ec.nintendo.com/api/my/transactions?offset={1}&limit={0}";
 
-    public NintendoAccountClient(NintendoLibrary library, IPlayniteAPI api)
+        public NintendoAccountClient(NintendoLibrary library, IPlayniteAPI api)
         {
             this.library = library;
             this.api = api;
@@ -49,25 +49,24 @@ namespace NintendoLibrary.Services
         public void Login()
         {
             var loggedIn = false;
-            
 
-            using (var view = api.WebViews.CreateView(1100,800))
+
+            using (var view = api.WebViews.CreateView(1100, 800))
             {
                 view.LoadingChanged += (s, e) =>
                 {
+                    if (e.IsLoading)
+                        return;
+
                     var address = view.GetCurrentAddress();
-                    if (address == "https://accounts.nintendo.com/")
+                    if (address == loginUrl)
                     {
                         loggedIn = true;
                         view.Close();
                     }
                 };
 
-                view.DeleteDomainCookies("https://ec.nintendo.com");
-                view.DeleteDomainCookies("https://accounts.nintendo.com");
-                view.DeleteDomainCookies("https://api.accounts.nintendo.com");
-                view.DeleteDomainCookies("https://api.ec.nintendo.co");
-                view.DeleteDomainCookies("https://apps.accounts.nintendo.com");
+                view.DeleteDomainCookies(".nintendo.com");
                 view.DeleteDomainCookies("ec.nintendo.com");
                 view.DeleteDomainCookies("accounts.nintendo.com");
                 view.DeleteDomainCookies("api.accounts.nintendo.com");
@@ -81,17 +80,17 @@ namespace NintendoLibrary.Services
             {
                 return;
             }
-                  
+
             dumpCookies();
 
             return;
         }
-  
+
         private IEnumerable<Playnite.SDK.HttpCookie> dumpCookies()
         {
             var view = api.WebViews.CreateOffscreenView();
 
-            var cookies = view.GetCookies(); 
+            var cookies = view.GetCookies();
 
 
             var cookieContainer = new CookieContainer();
@@ -109,7 +108,8 @@ namespace NintendoLibrary.Services
                 {
                     cookieContainer.Add(new Uri("https://ec.nintendo.com"), new Cookie(cookie.Name, cookie.Value));
                 }
-                if (cookie.Domain == "accounts.nintendo.com")                {
+                if (cookie.Domain == "accounts.nintendo.com")
+                {
 
                     cookieContainer.Add(new Uri("https://accounts.nintendo.com"), new Cookie(cookie.Name, cookie.Value));
                 }
@@ -188,7 +188,7 @@ namespace NintendoLibrary.Services
                     }
                 }
             }
-        }        
+        }
 
         public async Task<List<PurchasedList.Transaction>> GetPurchasedList()
         {
@@ -218,7 +218,7 @@ namespace NintendoLibrary.Services
             return titles;
         }
 
-    private void TryRefreshCookies()
+        private void TryRefreshCookies()
         {
             string address;
             using (var webView = api.WebViews.CreateOffscreenView())
@@ -229,19 +229,22 @@ namespace NintendoLibrary.Services
                     webView.Close();
                 };
                 webView.NavigateAndWait(loginUrl);
-      }
+            }
 
             using (var webView = api.WebViews.CreateOffscreenView())
             {
                 var loadingChanges = 0;
                 webView.LoadingChanged += (s, e) =>
                 {
+                    if (e.IsLoading)
+                        return;
+
                     loadingChanges++;
                     address = webView.GetCurrentAddress();
                     if (loadingChanges > 0 && address == "https://ec.nintendo.com/my/transactions/1")
                     {
-                      webView.Close();
-                    }                
+                        webView.Close();
+                    }
                 };
 
                 webView.NavigateAndWait("https://ec.nintendo.com/my/transactions/1");
