@@ -39,7 +39,7 @@ namespace NintendoLibrary.Services
         //private const string loginUrl = @"https://accounts.nintendo.com/login?post_login_redirect_uri=https%3A%2F%2Fec.nintendo.com%2Fmy%2Ftransactions%2F1";
         private const string purchasesListUrl = "https://ec.nintendo.com/api/my/transactions?offset={1}&limit={0}";
 
-    public NintendoAccountClient(NintendoLibrary library, IPlayniteAPI api)
+        public NintendoAccountClient(NintendoLibrary library, IPlayniteAPI api)
         {
             this.library = library;
             this.api = api;
@@ -49,9 +49,9 @@ namespace NintendoLibrary.Services
         public void Login()
         {
             var loggedIn = false;
-            
 
-            using (var view = api.WebViews.CreateView(1100,800))
+
+            using (var view = api.WebViews.CreateView(1100, 800))
             {
                 view.LoadingChanged += (s, e) =>
                 {
@@ -81,17 +81,17 @@ namespace NintendoLibrary.Services
             {
                 return;
             }
-                  
+
             dumpCookies();
 
             return;
         }
-  
+
         private IEnumerable<Playnite.SDK.HttpCookie> dumpCookies()
         {
             var view = api.WebViews.CreateOffscreenView();
 
-            var cookies = view.GetCookies(); 
+            var cookies = view.GetCookies();
 
 
             var cookieContainer = new CookieContainer();
@@ -109,7 +109,8 @@ namespace NintendoLibrary.Services
                 {
                     cookieContainer.Add(new Uri("https://ec.nintendo.com"), new Cookie(cookie.Name, cookie.Value));
                 }
-                if (cookie.Domain == "accounts.nintendo.com")                {
+                if (cookie.Domain == "accounts.nintendo.com")
+                {
 
                     cookieContainer.Add(new Uri("https://accounts.nintendo.com"), new Cookie(cookie.Name, cookie.Value));
                 }
@@ -188,7 +189,7 @@ namespace NintendoLibrary.Services
                     }
                 }
             }
-        }        
+        }
 
         public async Task<List<PurchasedList.Transaction>> GetPurchasedList()
         {
@@ -218,7 +219,7 @@ namespace NintendoLibrary.Services
             return titles;
         }
 
-    private void TryRefreshCookies()
+        private void TryRefreshCookies()
         {
             string address;
             using (var webView = api.WebViews.CreateOffscreenView())
@@ -229,7 +230,7 @@ namespace NintendoLibrary.Services
                     webView.Close();
                 };
                 webView.NavigateAndWait(loginUrl);
-      }
+            }
 
             using (var webView = api.WebViews.CreateOffscreenView())
             {
@@ -240,8 +241,8 @@ namespace NintendoLibrary.Services
                     address = webView.GetCurrentAddress();
                     if (loadingChanges > 0 && address == "https://ec.nintendo.com/my/transactions/1")
                     {
-                      webView.Close();
-                    }                
+                        webView.Close();
+                    }
                 };
 
                 webView.NavigateAndWait("https://ec.nintendo.com/my/transactions/1");
