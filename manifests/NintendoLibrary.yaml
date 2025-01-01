@@ -1,5 +1,11 @@
 AddonId: NintendoLibrary
 Packages:
+  - Version: 1.9
+    RequiredApiVersion: 6.9.0
+    ReleaseDate: 2025-01-01
+    PackageUrl: https://github.com/XenorPLxx/playnite-library-nintendo/releases/download/1.9/NintendoLibrary_1_9.pext
+    Changelog:
+      -  Fixes authentication (Jeshibu)
   - Version: 1.8
     RequiredApiVersion: 6.9.0
     ReleaseDate: 2024-11-30
