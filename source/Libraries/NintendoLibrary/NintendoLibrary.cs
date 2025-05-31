@@ -65,7 +65,7 @@ namespace NintendoLibrary
           platform = "nintendo_switch";
           break;
 
-        case "NX2":
+        case "OUNCE":
           platform = "nintendo_switch_2";
           break;
 
