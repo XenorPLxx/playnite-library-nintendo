@@ -315,7 +315,7 @@ namespace NintendoLibrary.Services
               idToken = queryParamsObject.idToken,
               language = "en",
               limit = vgcPageRequestLimit,
-              nasLanguage = vgcStateParamsObject.lang,
+              nasLanguage = "en-GB",
               offset = currentOffset,
               order = "ASC",
               shopId = 3,
