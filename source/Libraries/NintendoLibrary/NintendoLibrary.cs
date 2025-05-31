@@ -160,6 +160,8 @@ namespace NintendoLibrary
         var allGames = new List<GameMetadata>();
         allGames.AddRange(ParseVirtualGameCardsList(clientApi));
 
+        if (SettingsViewModel.Settings.Migration) { MigrateGames.call(this, allGames); }
+
         // This need to happen to merge games from different APIs
         foreach (var group in allGames.GroupBy(a => a.GameId))
         {

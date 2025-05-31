@@ -7,49 +7,54 @@
              mc:Ignorable="d"
              d:DesignHeight="400" d:DesignWidth="600">
 
-    <UserControl.Resources>
-        <sys:Boolean x:Key="True">True</sys:Boolean>
-        <sys:Boolean x:Key="False">False</sys:Boolean>
-    </UserControl.Resources>
+  <UserControl.Resources>
+    <sys:Boolean x:Key="True">True</sys:Boolean>
+    <sys:Boolean x:Key="False">False</sys:Boolean>
+  </UserControl.Resources>
 
-    <!--<TextBlock VerticalAlignment="Center" HorizontalAlignment="Center"
+  <!--<TextBlock VerticalAlignment="Center" HorizontalAlignment="Center"
                Text="Nintendo integration is currently broken and not supported." />-->
 
-    <StackPanel Margin="20">
-        <CheckBox Name="CheckNintendoConnectAccount"
+  <StackPanel Margin="20">
+    <CheckBox Name="CheckNintendoConnectAccount"
                   IsChecked="{Binding Settings.ConnectAccount}"
                   Content="{DynamicResource LOCSettingsConnectAccount}"/>
 
-        <StackPanel DockPanel.Dock="Top" Margin="40,5,0,0"
+    <CheckBox Name="CheckPSNMigration"
+                        IsChecked="{Binding Settings.Migration}"
+                        Content="Try to migrate games from the old plugin on the next library update"
+                        Margin="0,4,0,0"/>
+
+    <StackPanel DockPanel.Dock="Top" Margin="40,5,0,0"
                     IsEnabled="{Binding IsChecked, ElementName=CheckNintendoConnectAccount}">
 
-            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-                <Button Content="{DynamicResource LOCAuthenticateLabel}" HorizontalAlignment="Left"                         
+      <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+        <Button Content="{DynamicResource LOCAuthenticateLabel}" HorizontalAlignment="Left"                         
                         Command="{Binding LoginCommand}" Margin="0,5,5,5"/>
-                <TextBlock VerticalAlignment="Center" Margin="10,5,5,5">
-                    <TextBlock.Tag>
-                        <PriorityBinding>
-                            <Binding Path="IsUserLoggedIn" IsAsync="True" />
-                            <Binding Source="{x:Null}" />
-                        </PriorityBinding>
-                    </TextBlock.Tag>
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock" BasedOn="{StaticResource BaseTextBlockStyle}">
-                            <Style.Triggers>
-                                <Trigger Property="Tag" Value="{StaticResource True}">
-                                    <Setter Property="Text" Value="{DynamicResource LOCLoggedIn}" />
-                                </Trigger>
-                                <Trigger Property="Tag" Value="{StaticResource False}">
-                                    <Setter Property="Text" Value="{DynamicResource LOCNotLoggedIn}" />
-                                </Trigger>
-                                <Trigger Property="Tag" Value="{x:Null}">
-                                    <Setter Property="Text" Value="{DynamicResource LOCLoginChecking}" />
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </StackPanel>
-        </StackPanel>
+        <TextBlock VerticalAlignment="Center" Margin="10,5,5,5">
+          <TextBlock.Tag>
+            <PriorityBinding>
+              <Binding Path="IsUserLoggedIn" IsAsync="True" />
+              <Binding Source="{x:Null}" />
+            </PriorityBinding>
+          </TextBlock.Tag>
+          <TextBlock.Style>
+            <Style TargetType="TextBlock" BasedOn="{StaticResource BaseTextBlockStyle}">
+              <Style.Triggers>
+                <Trigger Property="Tag" Value="{StaticResource True}">
+                  <Setter Property="Text" Value="{DynamicResource LOCLoggedIn}" />
+                </Trigger>
+                <Trigger Property="Tag" Value="{StaticResource False}">
+                  <Setter Property="Text" Value="{DynamicResource LOCNotLoggedIn}" />
+                </Trigger>
+                <Trigger Property="Tag" Value="{x:Null}">
+                  <Setter Property="Text" Value="{DynamicResource LOCLoginChecking}" />
+                </Trigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+      </StackPanel>
     </StackPanel>
+  </StackPanel>
 </UserControl>
