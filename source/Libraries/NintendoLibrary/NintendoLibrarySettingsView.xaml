@@ -20,7 +20,7 @@
                   IsChecked="{Binding Settings.ConnectAccount}"
                   Content="{DynamicResource LOCSettingsConnectAccount}"/>
 
-    <CheckBox Name="CheckPSNMigration"
+    <CheckBox Name="CheckNintendoMigration"
                         IsChecked="{Binding Settings.Migration}"
                         Content="Try to migrate games from the old plugin on the next library update"
                         Margin="0,4,0,0"/>
