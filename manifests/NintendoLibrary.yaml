@@ -1,6 +1,12 @@
 AddonId: NintendoLibrary
 Packages:
-  - Version: 1.11
+  - Version: 1.12
+    RequiredApiVersion: 6.9.0
+    ReleaseDate: 2025-05-31
+    PackageUrl: https://github.com/XenorPLxx/playnite-library-nintendo/releases/download/1.12/NintendoLibrary_1_12.pext
+    Changelog:
+      - Sets language to en-GB forced
+  - Version: 1.12
     RequiredApiVersion: 6.9.0
     ReleaseDate: 2025-05-31
     PackageUrl: https://github.com/XenorPLxx/playnite-library-nintendo/releases/download/1.11/NintendoLibrary_1_11.pext
