@@ -122,7 +122,7 @@ namespace NintendoLibrary
 
         parsedGames.Add(new GameMetadata
         {
-          GameId = title.id,
+          GameId = title.applicationId,
           Name = gameName,
           Platforms = platform != null ? new HashSet<MetadataProperty> { new MetadataSpecProperty(platform) } : null
         });
