@@ -311,7 +311,7 @@ namespace NintendoLibrary.Services
                   }",
             variables = new
             {
-              country = "PL",
+              country = "GB",
               idToken = queryParamsObject.idToken,
               language = "en",
               limit = vgcPageRequestLimit,
@@ -331,7 +331,8 @@ namespace NintendoLibrary.Services
           var resp = await httpClient.SendAsync(requestMessage);
           var strResponse = await resp.Content.ReadAsStringAsync();
           var titles_part = Serialization.FromJson<Vgc>(strResponse);
-          titles.AddRange(titles_part.data.account.vgc.vgcViews.views);
+          try { titles.AddRange(titles_part.data.account.vgc.vgcViews.views); }
+          catch { throw new Exception(strResponse); }
           currentOffset += vgcPageRequestLimit;
           itemCount = titles_part.data.account.vgc.vgcViews.offsetInfo.total;
         } while (currentOffset < itemCount);
