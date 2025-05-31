@@ -1,18 +1,15 @@
-﻿using Playnite.SDK;
+﻿using NintendoLibrary.Models;
+using NintendoLibrary.Services;
+using Playnite.SDK;
 using Playnite.SDK.Models;
 using Playnite.SDK.Plugins;
-using NintendoLibrary.Models;
-using NintendoLibrary.Services;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Windows.Controls;
 
 namespace NintendoLibrary
 {
@@ -31,48 +28,13 @@ namespace NintendoLibrary
       SettingsViewModel = new NintendoLibrarySettingsViewModel(this, api);
     }
 
-    private string ParsePlatform(string platformId)
+    private IEnumerable<MetadataProperty> GetPlatforms(VirtualGameCardsList.View game)
     {
-      string platform = null;
+      if (game.apparentPlatform == "NX" || game.hasNxApplication || game.hasNxAddOnContents)
+        yield return new MetadataSpecProperty("nintendo_switch");
 
-      switch (platformId)
-      {
-        case "HAC":
-          platform = "nintendo_switch";
-          break;
-
-        case "CTR":
-          platform = "nintendo_3ds";
-          break;
-
-        case "WUP":
-          platform = "nintendo_wiiu";
-          break;
-
-        default:
-          break;
-      }
-      return platform;
-    }
-
-    private string ParseVgcPlatform(string platformId)
-    {
-      string platform = null;
-
-      switch (platformId)
-      {
-        case "NX":
-          platform = "nintendo_switch";
-          break;
-
-        case "OUNCE":
-          platform = "nintendo_switch_2";
-          break;
-
-        default:
-          break;
-      }
-      return platform;
+      if (game.apparentPlatform == "OUNCE" || game.hasOunceApplication || game.hasOunceAddOnContents)
+        yield return new MetadataNameProperty("Nintendo Switch 2");
     }
 
     private string FixGameName(string name)
@@ -85,57 +47,20 @@ namespace NintendoLibrary
       return Regex.Replace(gameName, @"\s+", " ");
     }
 
-    private List<GameMetadata> parseGames(List<PurchasedList.Transaction> gamesToParse)
-    {
-      var parsedGames = new List<GameMetadata>();
-      foreach (var title in gamesToParse)
-      {
-        string[] nonGameContentTypes = { "consumable", "service", "premium_ticket", "patch", "service_item" };
-        string[] gameContentTypes = { "title", "bundle", "aoc" };
-
-        if (!nonGameContentTypes.Any(s => title.content_type.Contains(s)))
-        {
-          var gameName = FixGameName(title.title);
-
-          string platform = ParsePlatform(title.device_type);
-
-          parsedGames.Add(new GameMetadata
-          {
-            GameId = title.transaction_id.ToString(),
-            Name = gameName,
-            Platforms = platform != null ? new HashSet<MetadataProperty> { new MetadataSpecProperty(platform) } : null
-          });
-        }
-      }
-
-      return parsedGames;
-    }
-
     private List<GameMetadata> parseVirtualGameCards(List<VirtualGameCardsList.View> gamesToParse)
     {
       var parsedGames = new List<GameMetadata>();
       foreach (var title in gamesToParse)
       {
-        var gameName = FixGameName(title.applicationName);
-
-        string platform = ParseVgcPlatform(title.apparentPlatform);
-
         parsedGames.Add(new GameMetadata
         {
           GameId = title.applicationId,
-          Name = gameName,
-          Platforms = platform != null ? new HashSet<MetadataProperty> { new MetadataSpecProperty(platform) } : null
+          Name = FixGameName(title.applicationName),
+          Platforms = GetPlatforms(title).ToHashSet(),
         });
       }
 
       return parsedGames;
-    }
-
-
-    private List<GameMetadata> ParsePlayedList(NintendoAccountClient clientApi)
-    {
-      var gamesToParse = clientApi.GetPurchasedList().GetAwaiter().GetResult();
-      return parseGames(gamesToParse);
     }
 
     private List<GameMetadata> ParseVirtualGameCardsList(NintendoAccountClient clientApi)
@@ -210,6 +135,5 @@ namespace NintendoLibrary
       }
       PlayniteApi.Dialogs.ShowMessage("This will NOT work.\n\r\n\rInstalling Nintendo games from the Nintendo library plugin is not supported. It is not possible to play Nintendo games this way; the Nintendo plugin is designed as a library management tool only.\n\r\n\rPlay this game via a console or an emulator instead.");
     }
-
   }
 }

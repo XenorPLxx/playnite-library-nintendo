@@ -62,6 +62,10 @@ namespace NintendoLibrary.Models
       public string applicationId { get; set; }
       public string applicationName { get; set; }
       public string apparentPlatform { get; set; }
+      public bool hasNxApplication { get; set; }
+      public bool hasNxAddOnContents { get; set; }
+      public bool hasOunceApplication { get; set; }
+      public bool hasOunceAddOnContents { get; set; }
       public class Icon
       {
         public string url { get; set; }
