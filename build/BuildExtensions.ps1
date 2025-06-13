@@ -24,7 +24,7 @@ if (!$SkipExtensions)
 {
     $solutionDir = Join-Path $pwd "..\source" 
     $msbuildpath = Get-MsBuildPath
-    Invoke-Nuget "restore `"..\source\PlayniteExtensions.sln`" -SolutionDirectory `"$solutionDir`""  
+    Invoke-Nuget "restore `"..\source\Playnite-NintendoLibrary.sln`" -SolutionDirectory `"$solutionDir`""  
 
     foreach ($extensionMan in (Get-ChildItem "..\source\" -Filter "extension.yaml" -Recurse))
     {
@@ -72,19 +72,6 @@ if (!$SkipExtensions)
                 $allPassed = $false
             }         
         }
-    }
-}
-
-if (!$SkipThemes)
-{
-    foreach ($themeMan in (Get-ChildItem "..\source\Themes\" -Filter "theme.yaml" -Recurse))
-    {
-        $themeDir = Split-Path $themeMan -Parent
-        $addonManifest = Get-Content (Join-Path $themeDir "theme.yaml") | ConvertFrom-Yaml 
-        if ((StartAndWait $ToolboxPath "pack `"$themeDir`" `"$OutputDir`"") -ne 0)
-        {
-            $allPassed = $false
-        }   
     }
 }
 
