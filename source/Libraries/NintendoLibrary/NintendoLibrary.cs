@@ -34,7 +34,7 @@ namespace NintendoLibrary
         yield return new MetadataSpecProperty("nintendo_switch");
 
       if (game.apparentPlatform == "OUNCE" || game.hasOunceApplication || game.hasOunceAddOnContents)
-        yield return new MetadataNameProperty("Nintendo Switch 2");
+        yield return new MetadataSpecProperty("nintendo_switch2");
     }
 
     private string FixGameName(string name)

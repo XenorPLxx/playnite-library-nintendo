@@ -34,8 +34,8 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Playnite.SDK, Version=6.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\PlayniteSDK.6.0.0\lib\net462\Playnite.SDK.dll</HintPath>
+    <Reference Include="Playnite.SDK, Version=6.12.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\PlayniteSDK.6.12.0\lib\net462\Playnite.SDK.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -153,7 +153,6 @@
     </Compile>
     <Compile Include="Models\NintendoModels.cs" />
     <Compile Include="NintendoGameController.cs" />
-    <Compile Include="NintendoLibraryClient.cs" />
     <Compile Include="NintendoLibrary.cs" />
     <Compile Include="NintendoLibrarySettingsViewModel.cs" />
     <Compile Include="NintendoLibrarySettingsView.xaml.cs">
