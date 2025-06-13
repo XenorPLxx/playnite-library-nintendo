@@ -1,5 +1,6 @@
 AddonId: NintendoLibrary
 Packages:
+  # Make sure to set RequiredApiVersion to 6.12.0! That way people who don't have the nintendo_switch2 platform specification (present since Playnite 10.36, which is SDK v6.12.0) don't run into the "that platform specification doesn't exist" exception
   - Version: 1.14
     RequiredApiVersion: 6.9.0
     ReleaseDate: 2025-05-31
