@@ -60,7 +60,12 @@ namespace NintendoLibrary.Services
       var loggedIn = false;
 
 
-      using (var view = api.WebViews.CreateView(1100, 800))
+      WebViewSettings webViewSettings = new WebViewSettings();
+      webViewSettings.WindowHeight = 800;
+      webViewSettings.WindowWidth = 1100;
+      webViewSettings.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
+
+      using (var view = api.WebViews.CreateView(webViewSettings))
       {
         view.LoadingChanged += (s, e) =>
         {
