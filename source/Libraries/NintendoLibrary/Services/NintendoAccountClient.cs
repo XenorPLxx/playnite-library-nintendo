@@ -43,10 +43,9 @@ namespace NintendoLibrary.Services
     private readonly string tokenPath;
     private const int pageRequestLimit = 100;
     private const int vgcPageRequestLimit = 300;
-    private const string loginUrl = @"https://ec.nintendo.com/my/transactions/1";
-    //private const string loginUrl = @"https://accounts.nintendo.com/login?post_login_redirect_uri=https%3A%2F%2Fec.nintendo.com%2Fmy%2Ftransactions%2F1";
     private const string purchasesListUrl = "https://ec.nintendo.com/api/my/transactions?offset={1}&limit={0}";
     private const string vgcMainPageUrl = "https://accounts.nintendo.com/portal/vgcs/?sort=activated_date&order=desc";
+    private const string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
 
     public NintendoAccountClient(NintendoLibrary library, IPlayniteAPI api)
     {
@@ -63,7 +62,7 @@ namespace NintendoLibrary.Services
       WebViewSettings webViewSettings = new WebViewSettings();
       webViewSettings.WindowHeight = 800;
       webViewSettings.WindowWidth = 1100;
-      webViewSettings.UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
+      webViewSettings.UserAgent = userAgent;
 
       using (var view = api.WebViews.CreateView(webViewSettings))
       {
@@ -73,7 +72,7 @@ namespace NintendoLibrary.Services
             return;
 
           var address = view.GetCurrentAddress();
-          if (address == loginUrl)
+          if (address != null && address.StartsWith("https://accounts.nintendo.com/portal/vgcs", StringComparison.OrdinalIgnoreCase))
           {
             loggedIn = true;
             view.Close();
@@ -86,7 +85,7 @@ namespace NintendoLibrary.Services
         view.DeleteDomainCookies("api.accounts.nintendo.com");
         view.DeleteDomainCookies("api.ec.nintendo.com");
         view.DeleteDomainCookies("apps.accounts.nintendo.com");
-        view.Navigate(loginUrl);
+        view.Navigate(vgcMainPageUrl);
         view.OpenDialog();
       }
 
@@ -121,6 +120,7 @@ namespace NintendoLibrary.Services
         if (cookie.Domain == ".nintendo.com")
         {
           cookieContainer.Add(new Uri("https://ec.nintendo.com"), new Cookie(cookie.Name, cookie.Value));
+          cookieContainer.Add(new Uri("https://accounts.nintendo.com"), new Cookie(cookie.Name, cookie.Value));
         }
         if (cookie.Domain == "accounts.nintendo.com")
         {
@@ -242,6 +242,7 @@ namespace NintendoLibrary.Services
       using (var handler = new HttpClientHandler() { CookieContainer = cookieContainer })
       using (var httpClient = new HttpClient(handler))
       {
+        httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
         var itemCount = 0;
         var currentOffset = 0;
 
@@ -346,31 +347,9 @@ namespace NintendoLibrary.Services
     }
     private void TryRefreshCookies()
     {
-      string address;
       using (var webView = api.WebViews.CreateOffscreenView())
       {
-        webView.LoadingChanged += (s, e) =>
-        {
-          address = webView.GetCurrentAddress();
-          webView.Close();
-        };
-        webView.NavigateAndWait(loginUrl);
-      }
-      using (var webView = api.WebViews.CreateOffscreenView())
-      {
-        var loadingChanges = 0;
-        webView.LoadingChanged += (s, e) =>
-        {
-          if (e.IsLoading)
-            return;
-          loadingChanges++;
-          address = webView.GetCurrentAddress();
-          if (loadingChanges > 0 && address == "https://ec.nintendo.com/my/transactions/1")
-          {
-            webView.Close();
-          }
-        };
-        webView.NavigateAndWait("https://ec.nintendo.com/my/transactions/1");
+        webView.NavigateAndWait(vgcMainPageUrl);
       }
       dumpCookies();
     }
@@ -386,18 +365,16 @@ namespace NintendoLibrary.Services
         using (var handler = new HttpClientHandler() { CookieContainer = cookieContainer })
         using (var httpClient = new HttpClient(handler))
         {
-          var resp = httpClient.GetAsync(purchasesListUrl.Format(10, 0)).GetAwaiter().GetResult();
-          var strResponse = await resp.Content.ReadAsStringAsync();
-          if (Serialization.TryFromJson<AuthError>(strResponse, out var error) && error.error != null)
+          httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
+          var strResponse = await httpClient.GetStringAsync(vgcMainPageUrl);
+          var match = Regex.Match(strResponse, @"<div id=""data"" data-json=""(.*?)""");
+          if (!match.Success)
           {
             return false;
           }
-          if (Serialization.TryFromJson<PurchasedList>(strResponse, out var purchasedList) && purchasedList?.transactions != null)
-          {
-            return true;
-          }
+          var queryParams = Serialization.FromJson<VgcQueryParams>(HttpUtility.HtmlDecode(match.Groups[1].Value));
+          return !string.IsNullOrEmpty(queryParams?.idToken);
         }
-        return false;
       }
       catch (Exception e) when (!Debugger.IsAttached)
       {
