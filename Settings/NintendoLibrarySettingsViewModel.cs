@@ -12,7 +12,6 @@ namespace NintendoLibrary
   public class NintendoLibrarySettings
   {
     public bool ConnectAccount { get; set; } = true;
-    public bool Migration { get; set; } = true;
   }
 
   public class NintendoLibrarySettingsViewModel : PluginSettingsViewModel<NintendoLibrarySettings, NintendoLibrary>

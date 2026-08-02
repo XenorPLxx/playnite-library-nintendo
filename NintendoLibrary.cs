@@ -19,7 +19,7 @@ namespace NintendoLibrary
     public NintendoLibrary(IPlayniteAPI api) : base(
         "Nintendo",
         Guid.Parse("e4ac81cb-1b1a-4ec9-8639-9a9633989a72"),
-        new LibraryPluginProperties { CanShutdownClient = false, HasCustomizedGameImport = true, HasSettings = true },
+        new LibraryPluginProperties { CanShutdownClient = false, HasSettings = true },
         null,
         Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"icon.png"),
         (_) => new NintendoLibrarySettingsView(),
@@ -69,14 +69,14 @@ namespace NintendoLibrary
       return parseVirtualGameCards(gamesToParse);
     }
 
-    public override IEnumerable<Game> ImportGames(LibraryImportGamesArgs args)
+    public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
     {
-      var importedGames = new List<Game>();
+      var games = new List<GameMetadata>();
 
       Exception importError = null;
-      if (!SettingsViewModel.Settings.ConnectAccount)
+      if (!SettingsViewModel.Settings.ConnectAccount || args.CancelToken.IsCancellationRequested)
       {
-        return importedGames;
+        return games;
       }
 
       try
@@ -85,23 +85,16 @@ namespace NintendoLibrary
         var allGames = new List<GameMetadata>();
         allGames.AddRange(ParseVirtualGameCardsList(clientApi));
 
-        if (SettingsViewModel.Settings.Migration) { MigrateGames.call(this, allGames); }
+        if (args.CancelToken.IsCancellationRequested)
+        {
+          return games;
+        }
 
-        // This need to happen to merge games from different APIs
         foreach (var group in allGames.GroupBy(a => a.GameId))
         {
           var game = group.First();
-          if (PlayniteApi.ApplicationSettings.GetGameExcludedFromImport(game.GameId, Id))
-          {
-            continue;
-          }
-
-          var alreadyImported = PlayniteApi.Database.Games.FirstOrDefault(a => a.GameId == game.GameId && a.PluginId == Id);
-          if (alreadyImported == null)
-          {
-            game.Source = new MetadataNameProperty("Nintendo");
-            importedGames.Add(PlayniteApi.Database.ImportGame(game, this));
-          }
+          game.Source = new MetadataNameProperty("Nintendo");
+          games.Add(game);
         }
       }
       catch (Exception e) when (!Debugger.IsAttached)
@@ -124,7 +117,7 @@ namespace NintendoLibrary
         PlayniteApi.Notifications.Remove(ImportErrorMessageId);
       }
 
-      return importedGames;
+      return games;
     }
 
     public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
