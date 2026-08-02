@@ -35,7 +35,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Playnite.SDK, Version=6.12.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\PlayniteSDK.6.12.0\lib\net462\Playnite.SDK.dll</HintPath>
+      <HintPath>packages\PlayniteSDK.6.12.0\lib\net462\Playnite.SDK.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -52,110 +52,104 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Fileapi.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Fileapi.cs">
       <Link>Shared\Native\Fileapi.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Gdi32.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Gdi32.cs">
       <Link>Shared\Native\Gdi32.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Kernel32.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Kernel32.cs">
       <Link>Shared\Native\Kernel32.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Ntdll.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Ntdll.cs">
       <Link>Shared\Native\Ntdll.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Powrprof.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Powrprof.cs">
       <Link>Shared\Native\Powrprof.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Processthreadsapi.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Processthreadsapi.cs">
       <Link>Shared\Native\Processthreadsapi.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Psapi.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Psapi.cs">
       <Link>Shared\Native\Psapi.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Shell32.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Shell32.cs">
       <Link>Shared\Native\Shell32.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Shlwapi.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Shlwapi.cs">
       <Link>Shared\Native\Shlwapi.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\User32.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\User32.cs">
       <Link>Shared\Native\User32.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Winbase.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Winbase.cs">
       <Link>Shared\Native\Winbase.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Windef.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Windef.cs">
       <Link>Shared\Native\Windef.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\WinError.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\WinError.cs">
       <Link>Shared\Native\WinError.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Wingdi.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Wingdi.cs">
       <Link>Shared\Native\Wingdi.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\Winnt.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\Winnt.cs">
       <Link>Shared\Native\Winnt.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\PlayniteRepo\source\playnite\native\winuser.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Native\winuser.cs">
       <Link>Shared\Native\winuser.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\extensions\Enums.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\Extensions\Enums.cs">
       <Link>Shared\Enums.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\extensions\ObjectExtensions.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\Extensions\ObjectExtensions.cs">
       <Link>Shared\ObjectExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\extensions\StringExtensions.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\Extensions\StringExtensions.cs">
       <Link>Shared\StringExtensions.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\FileSystem.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\FileSystem.cs">
       <Link>Shared\FileSystem.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\GlobalRandom.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\GlobalRandom.cs">
       <Link>Shared\GlobalRandom.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\IniParser.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\IniParser.cs">
       <Link>Shared\IniParser.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\Paths.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\Paths.cs">
       <Link>Shared\Paths.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\ProcessStarter.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\ProcessStarter.cs">
       <Link>Shared\ProcessStarter.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\Programs.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\Programs.cs">
       <Link>Shared\Programs.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\web\Downloader.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\Web\Downloader.cs">
       <Link>Shared\Downloader.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\common\web\HttpDownloader.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Common\Web\HttpDownloader.cs">
       <Link>Shared\HttpDownloader.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\converters\InvertableBooleanToVisibilityConverter.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Converters\InvertableBooleanToVisibilityConverter.cs">
       <Link>Shared\InvertableBooleanToVisibilityConverter.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\converters\NegateConverter.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Converters\NegateConverter.cs">
       <Link>Shared\NegateConverter.cs</Link>
     </Compile>
-    <Compile Include="..\..\..\playniterepo\source\playnite\converters\ObjectToStringConverter.cs">
+    <Compile Include="PlayniteRepo\source\Playnite\Converters\ObjectToStringConverter.cs">
       <Link>Shared\ObjectToStringConverter.cs</Link>
     </Compile>
-    <Compile Include="..\..\Generic\PlayniteExtensions.Common\GlobalCommands.cs">
-      <Link>Shared\GlobalCommands.cs</Link>
-    </Compile>
-    <Compile Include="..\..\Generic\PlayniteExtensions.Common\PluginBase.cs">
-      <Link>Shared\PluginBase.cs</Link>
-    </Compile>
-    <Compile Include="..\..\Generic\PlayniteExtensions.Common\PluginSettingsViewModel.cs">
-      <Link>Shared\PluginSettingsViewModel.cs</Link>
-    </Compile>
+    <Compile Include="Common\GlobalCommands.cs" />
+    <Compile Include="Common\PluginBase.cs" />
+    <Compile Include="Common\PluginSettingsViewModel.cs" />
     <Compile Include="Models\NintendoModels.cs" />
     <Compile Include="NintendoGameController.cs" />
     <Compile Include="NintendoLibrary.cs" />
-    <Compile Include="NintendoLibrarySettingsViewModel.cs" />
-    <Compile Include="NintendoLibrarySettingsView.xaml.cs">
+    <Compile Include="Settings\NintendoLibrarySettingsViewModel.cs" />
+    <Compile Include="Settings\NintendoLibrarySettingsView.xaml.cs">
       <DependentUpon>NintendoLibrarySettingsView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -168,15 +162,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="icon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\..\localization\en_US.xaml">
-      <Link>Localization\en_US.xaml</Link>
+    <None Include="Localization\*.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -185,10 +174,13 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="NintendoLibrarySettingsView.xaml">
+    <Page Include="Settings\NintendoLibrarySettingsView.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Shared\Native\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
