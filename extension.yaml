@@ -1,7 +1,0 @@
-﻿Id: NintendoLibrary
-Name: Nintendo library integration
-Author: Xenor
-Version: 1.18
-Module: NintendoLibrary.dll
-Type: GameLibrary
-Icon: icon.png

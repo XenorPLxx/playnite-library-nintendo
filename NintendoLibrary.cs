@@ -1,154 +1,127 @@
-﻿using NintendoLibrary.Models;
-using NintendoLibrary.Services;
-using Playnite.SDK;
-using Playnite.SDK.Models;
-using Playnite.SDK.Plugins;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Text.RegularExpressions;
-using System.Threading;
+using Playnite;
 
-namespace NintendoLibrary
+namespace NintendoLibrary;
+
+public sealed class NintendoLibraryPlugin : Plugin
 {
-  [LoadPlugin]
-  public class NintendoLibrary : LibraryPluginBase<NintendoLibrarySettingsViewModel>
-  {
-    public NintendoLibrary(IPlayniteAPI api) : base(
-        "Nintendo",
-        Guid.Parse("e4ac81cb-1b1a-4ec9-8639-9a9633989a72"),
-        new LibraryPluginProperties { CanShutdownClient = false, HasSettings = true },
-        null,
-        Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), @"icon.png"),
-        (_) => new NintendoLibrarySettingsView(),
-        api)
-    {
-      SettingsViewModel = new NintendoLibrarySettingsViewModel(this, api);
-    }
+    private static readonly ILogger logger = LogManager.GetLogger();
+    private static readonly IdImportableProperty nintendoSource = new("nintendo", "Nintendo");
 
-    private IEnumerable<MetadataProperty> GetPlatforms(VirtualGameCardsList.View game)
-    {
-      if (game.apparentPlatform == "NX" || game.hasNxApplication || game.hasNxAddOnContents)
-        yield return new MetadataSpecProperty("nintendo_switch");
+    public const string Id = "Xenor.NintendoLibrary";
 
-      if (game.apparentPlatform == "OUNCE" || game.hasOunceApplication || game.hasOunceAddOnContents)
-        yield return new MetadataSpecProperty("nintendo_switch2");
-    }
+    public IPlayniteApi PlayniteApi { get; private set; } = null!;
 
-    private string FixGameName(string name)
-    {
-      var gameName = name.
-          RemoveTrademarks(" ").
-          NormalizeGameName().
-          Replace("full game", "", StringComparison.OrdinalIgnoreCase).
-          Trim();
-      return Regex.Replace(gameName, @"\s+", " ");
-    }
+    public NintendoLibraryPluginSettings Settings { get; private set; } = new();
 
-    private static bool IsAddOnOnly(VirtualGameCardsList.View game)
+    public NintendoLibraryPlugin()
     {
-      return !game.hasApplication && game.hasAddOnContents;
-    }
-
-    private List<GameMetadata> parseVirtualGameCards(List<VirtualGameCardsList.View> gamesToParse)
-    {
-      var parsedGames = new List<GameMetadata>();
-      foreach (var title in gamesToParse)
-      {
-        if (SettingsViewModel.Settings.ExcludeAddOnOnlyEntries && IsAddOnOnly(title))
+        LibrarySettings = new LibrarySupport
         {
-          continue;
+            LibraryName = "Nintendo",
+            CanCloseOriginalClient = false,
+            CanOpenOriginalClient = false,
+            CanImportPlaytime = false,
+            CanImportPlaySessions = false
+        };
+    }
+
+    public override Task InitializeAsync(InitializeArgs args)
+    {
+        PlayniteApi = args.Api;
+        Loc.Api = args.Api;
+        Settings = NintendoLibrarySettingsHandler.LoadSettings(PlayniteApi.UserDataDir);
+        return Task.CompletedTask;
+    }
+
+    public override async Task<List<ImportableGame>> GetGamesAsync(LibraryGetGamesArgs args)
+    {
+        if (!Settings.ConnectAccount || args.CancelToken.IsCancellationRequested)
+        {
+            return [];
         }
 
-        var iconUrl = title.icon?.upgradedIconUrl ?? title.icon?.url;
-        parsedGames.Add(new GameMetadata
+        try
         {
-          GameId = title.applicationId,
-          Name = FixGameName(title.applicationName),
-          Platforms = GetPlatforms(title).ToHashSet(),
-          Icon = string.IsNullOrEmpty(iconUrl) ? null : new MetadataFile(iconUrl),
-        });
-      }
+            var client = new NintendoAccountClient(PlayniteApi);
+            var cards = await client.GetVirtualGameCardsAsync(args.CancelToken);
+            var games = new List<ImportableGame>();
 
-      return parsedGames;
+            foreach (var card in cards)
+            {
+                args.CancelToken.ThrowIfCancellationRequested();
+                if (Settings.ExcludeAddOnOnlyEntries && card.IsAddOnOnly)
+                {
+                    continue;
+                }
+
+                // Normalization can empty a name that looked usable, e.g. one made only of marks.
+                var name = NintendoGameName.Normalize(card.ApplicationName);
+                if (string.IsNullOrWhiteSpace(card.ApplicationId) || string.IsNullOrWhiteSpace(name))
+                {
+                    continue;
+                }
+
+                var game = new ImportableGame(name, Id, card.ApplicationId)
+                {
+                    Source = nintendoSource,
+                    Platforms = GetPlatforms(card)
+                };
+
+                if (!string.IsNullOrWhiteSpace(card.IconUrl))
+                {
+                    game.MediaFiles = [new ImportableFile(BuiltInGameDataId.DesktopIcon, card.IconUrl)];
+                }
+
+                games.Add(game);
+            }
+
+            PlayniteApi.Notifications.Remove("nintendo_import_error");
+            return games
+                .GroupBy(game => game.GameId, StringComparer.Ordinal)
+                .Select(group => group.First())
+                .ToList();
+        }
+        catch (OperationCanceledException) when (args.CancelToken.IsCancellationRequested)
+        {
+            return [];
+        }
+        catch (Exception e)
+        {
+            logger.Error(e, "Failed to import Nintendo games.");
+            PlayniteApi.Notifications.Add(new NotificationMessage(
+                "nintendo_import_error",
+                Loc.library_import_error("Nintendo") + Environment.NewLine + e.Message,
+                NotificationSeverity.Error,
+                async () => await PlayniteApi.MainView.OpenPluginSettingsAsync(Id)));
+            return [];
+        }
     }
 
-    private List<GameMetadata> ParseVirtualGameCardsList(NintendoAccountClient clientApi, CancellationToken cancellationToken)
+    public override Task<PluginSettingsHandler?> GetSettingsHandlerAsync(GetSettingsHandlerArgs args)
     {
-      var gamesToParse = clientApi.GetVirtualGameCardsList(cancellationToken).GetAwaiter().GetResult();
-      return parseVirtualGameCards(gamesToParse);
+        return Task.FromResult<PluginSettingsHandler?>(new NintendoLibrarySettingsHandler(this, args));
     }
 
-    public override IEnumerable<GameMetadata> GetGames(LibraryGetGamesArgs args)
+    internal bool SaveSettings(NintendoLibraryPluginSettings settings)
     {
-      var games = new List<GameMetadata>();
+        Settings = settings;
+        return NintendoLibrarySettingsHandler.SaveSettings(PlayniteApi.UserDataDir, settings);
+    }
 
-      Exception importError = null;
-      if (!SettingsViewModel.Settings.ConnectAccount || args.CancelToken.IsCancellationRequested)
-      {
-        return games;
-      }
-
-      try
-      {
-        var clientApi = new NintendoAccountClient(this, PlayniteApi);
-        var allGames = new List<GameMetadata>();
-        allGames.AddRange(ParseVirtualGameCardsList(clientApi, args.CancelToken));
-
-        if (args.CancelToken.IsCancellationRequested)
+    private static List<ImportableProperty> GetPlatforms(VirtualGameCard card)
+    {
+        var platforms = new List<ImportableProperty>();
+        if (card.ApparentPlatform == "NX" || card.HasNxApplication || card.HasNxAddOnContents)
         {
-          return games;
+            platforms.Add(new SpecImportableProperty("nintendo_switch"));
         }
 
-        foreach (var group in allGames.GroupBy(a => a.GameId))
+        if (card.ApparentPlatform == "OUNCE" || card.HasOunceApplication || card.HasOunceAddOnContents)
         {
-          if (args.CancelToken.IsCancellationRequested)
-          {
-            return games;
-          }
-
-          var game = group.First();
-          game.Source = new MetadataNameProperty("Nintendo");
-          games.Add(game);
+            platforms.Add(new SpecImportableProperty("nintendo_switch2"));
         }
-      }
-      catch (OperationCanceledException) when (args.CancelToken.IsCancellationRequested)
-      {
-        return games;
-      }
-      catch (Exception e) when (!Debugger.IsAttached)
-      {
-        Logger.Error(e, "Failed to import Nintendo games.");
-        importError = e;
-      }
 
-      if (importError != null)
-      {
-        PlayniteApi.Notifications.Add(new NotificationMessage(
-            ImportErrorMessageId,
-            string.Format(PlayniteApi.Resources.GetString("LOCLibraryImportError"), Name) +
-            System.Environment.NewLine + importError.Message,
-            NotificationType.Error,
-            () => OpenSettingsView()));
-      }
-      else
-      {
-        PlayniteApi.Notifications.Remove(ImportErrorMessageId);
-      }
-
-      return games;
+        return platforms;
     }
 
-    public override IEnumerable<InstallController> GetInstallActions(GetInstallActionsArgs args)
-    {
-      if (args.Game.PluginId != Id)
-      {
-        yield break;
-      }
-      PlayniteApi.Dialogs.ShowMessage("This will NOT work.\n\r\n\rInstalling Nintendo games from the Nintendo library plugin is not supported. It is not possible to play Nintendo games this way; the Nintendo plugin is designed as a library management tool only.\n\r\n\rPlay this game via a console or an emulator instead.");
-    }
-  }
 }
