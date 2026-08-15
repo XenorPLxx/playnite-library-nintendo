@@ -36,6 +36,13 @@ namespace NintendoLibrary.Models
   public class Vgc
   {
     public vgcData data { get; set; }
+    public List<Error> errors { get; set; }
+
+    public class Error
+    {
+      public string message { get; set; }
+    }
+
     public class vgcData
     {
       public vgcAccount account { get; set; }

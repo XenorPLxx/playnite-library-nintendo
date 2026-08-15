@@ -245,100 +245,12 @@ namespace NintendoLibrary.Services
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
         var itemCount = 0;
         var currentOffset = 0;
+        var queryParamsObject = await GetVirtualGameCardsQueryParams(httpClient);
 
         do
         {
-          var jwtResp = await httpClient.GetStringAsync(vgcMainPageUrl);
-          var queryParamsObject = Serialization.FromJson<VgcQueryParams>(HttpUtility.HtmlDecode(Regex.Match(jwtResp, @"<div id=""data"" data-json=""(.*?)""").Groups[1].Value));
-          var vgcStateParamsObject = Serialization.FromJson<VgcStateParams>(HttpUtility.HtmlDecode(Regex.Match(jwtResp, @"<div id=""state"" data-json=""(.*?)""").Groups[1].Value));
-
-          var queryObject = new
-          {
-            query = @"query getVgcs(
-                    $idToken: String!
-                    $country: CountryCode!
-                    $language: LanguageCode!
-                    $shopId: Int!
-                    $limit: Int!
-                    $nasLanguage: String!
-                    $offset: Int!
-                    $order: RequestableVgcViewOrder!
-                    $sortBy: RequestableVgcViewSortBy!
-                    $vgcViewType: VgcViewTypeInput
-                    $vgcViewStatus: VgcViewStatusInput
-                  ) @inContext(country: $country, language: $language, shopId: $shopId) {
-                    account {
-                      vgc {
-                        vgcViews(
-                          idToken: $idToken,
-                          limit: $limit,
-                          nasLanguage: $nasLanguage,
-                          offset: $offset,
-                          order: $order,
-                          sortBy: $sortBy,
-                          isHidden: false,
-                          vgcViewType: $vgcViewType,
-                          vgcViewStatus: $vgcViewStatus,
-                        ) {
-                          offsetInfo {
-                            total
-                            offset
-                          }
-                          views {
-                            id
-                            applicationId
-                            applicationName
-                            apparentPlatform
-                            publisher
-                            icon {
-                              url
-                              upgradedIconUrl
-                              sizes
-                            }
-                            ownerNaId
-                            userNaId
-                            isHidden
-                            isLending
-                            isPartialLending
-                            lendingExpireDatetime
-                            insertedNsDeviceId
-                            hasApplication
-                            hasAddOnContents
-                            hasUpgrade
-                            hasNxApplication
-                            hasNxAddOnContents
-                            hasOunceApplication
-                            hasOunceAddOnContents
-                            containsReleased
-                          }
-                        }
-                      }
-                    }
-                  }",
-            variables = new
-            {
-              country = "GB",
-              idToken = queryParamsObject.idToken,
-              language = "en",
-              limit = vgcPageRequestLimit,
-              nasLanguage = "en-GB",
-              offset = currentOffset,
-              order = "ASC",
-              shopId = 3,
-              sortBy = "ACTIVATED_DATE"
-            }
-          };
-
-
-          HttpRequestMessage requestMessage = new HttpRequestMessage(new HttpMethod("post"), queryParamsObject.shopGraphQLApiUrl);
-          requestMessage.Content = new StringContent(Serialization.ToJson(queryObject), Encoding.UTF8, "application/json");
-          requestMessage.Headers.Add("x-nintendo-savanna-client-id", queryParamsObject.savannaClientId);
-
-          var resp = await httpClient.SendAsync(requestMessage);
-          var strResponse = await resp.Content.ReadAsStringAsync();
-          var titles_part = Serialization.FromJson<Vgc>(strResponse);
-          try { titles.AddRange(titles_part.data.account.vgc.vgcViews.views); }
-          catch { throw new Exception(strResponse); }
+          var titles_part = await GetVirtualGameCardsPage(httpClient, queryParamsObject, currentOffset);
+          titles.AddRange(titles_part.data.account.vgc.vgcViews.views);
           currentOffset += vgcPageRequestLimit;
           itemCount = titles_part.data.account.vgc.vgcViews.offsetInfo.total;
         } while (currentOffset < itemCount);
@@ -346,10 +258,140 @@ namespace NintendoLibrary.Services
       return titles;
     }
 
+    private async Task<VgcQueryParams> GetVirtualGameCardsQueryParams(HttpClient httpClient)
+    {
+      var portalResponse = await httpClient.GetStringAsync(vgcMainPageUrl);
+      var match = Regex.Match(portalResponse, @"<div id=""data"" data-json=""(.*?)""");
+      if (!match.Success)
+      {
+        throw new Exception("Nintendo Account portal did not return Virtual Game Cards query parameters.");
+      }
+
+      var queryParams = Serialization.FromJson<VgcQueryParams>(HttpUtility.HtmlDecode(match.Groups[1].Value));
+      if (!HasVirtualGameCardsQueryParams(queryParams))
+      {
+        throw new Exception("Nintendo Account portal returned incomplete Virtual Game Cards query parameters.");
+      }
+
+      return queryParams;
+    }
+
+    private static bool HasVirtualGameCardsQueryParams(VgcQueryParams queryParams)
+    {
+      return queryParams != null && !string.IsNullOrEmpty(queryParams.idToken) &&
+             !string.IsNullOrEmpty(queryParams.savannaClientId) && !string.IsNullOrEmpty(queryParams.shopGraphQLApiUrl);
+    }
+
+    private async Task<Vgc> GetVirtualGameCardsPage(HttpClient httpClient, VgcQueryParams queryParams, int offset)
+    {
+      var queryObject = new
+      {
+        query = @"query getVgcs(
+                  $idToken: String!
+                  $country: CountryCode!
+                  $language: LanguageCode!
+                  $shopId: Int!
+                  $limit: Int!
+                  $nasLanguage: String!
+                  $offset: Int!
+                  $order: RequestableVgcViewOrder!
+                  $sortBy: RequestableVgcViewSortBy!
+                  $vgcViewType: VgcViewTypeInput
+                  $vgcViewStatus: VgcViewStatusInput
+                ) @inContext(country: $country, language: $language, shopId: $shopId) {
+                  account {
+                    vgc {
+                      vgcViews(
+                        idToken: $idToken,
+                        limit: $limit,
+                        nasLanguage: $nasLanguage,
+                        offset: $offset,
+                        order: $order,
+                        sortBy: $sortBy,
+                        isHidden: false,
+                        vgcViewType: $vgcViewType,
+                        vgcViewStatus: $vgcViewStatus,
+                      ) {
+                        offsetInfo {
+                          total
+                          offset
+                        }
+                        views {
+                          id
+                          applicationId
+                          applicationName
+                          apparentPlatform
+                          publisher
+                          icon {
+                            url
+                            upgradedIconUrl
+                            sizes
+                          }
+                          ownerNaId
+                          userNaId
+                          isHidden
+                          isLending
+                          isPartialLending
+                          lendingExpireDatetime
+                          insertedNsDeviceId
+                          hasApplication
+                          hasAddOnContents
+                          hasUpgrade
+                          hasNxApplication
+                          hasNxAddOnContents
+                          hasOunceApplication
+                          hasOunceAddOnContents
+                          containsReleased
+                        }
+                      }
+                    }
+                  }
+                }",
+        variables = new
+        {
+          country = "GB",
+          idToken = queryParams.idToken,
+          language = "en",
+          limit = vgcPageRequestLimit,
+          nasLanguage = "en-GB",
+          offset,
+          order = "ASC",
+          shopId = 3,
+          sortBy = "ACTIVATED_DATE"
+        }
+      };
+
+      using (var request = new HttpRequestMessage(HttpMethod.Post, queryParams.shopGraphQLApiUrl))
+      {
+        request.Content = new StringContent(Serialization.ToJson(queryObject), Encoding.UTF8, "application/json");
+        request.Headers.Add("x-nintendo-savanna-client-id", queryParams.savannaClientId);
+
+        using (var response = await httpClient.SendAsync(request))
+        {
+          if (!response.IsSuccessStatusCode)
+          {
+            throw new Exception($"Nintendo Virtual Game Cards request failed with HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).");
+          }
+
+          var vgc = Serialization.FromJson<Vgc>(await response.Content.ReadAsStringAsync());
+          if (vgc?.errors?.Count > 0)
+          {
+            throw new Exception("Nintendo Virtual Game Cards request failed: " + vgc.errors.FirstOrDefault()?.message);
+          }
+
+          if (vgc?.data?.account?.vgc?.vgcViews?.offsetInfo == null || vgc.data.account.vgc.vgcViews.views == null)
+          {
+            throw new Exception("Nintendo Virtual Game Cards request returned an incomplete response.");
+          }
+
+          return vgc;
+        }
+      }
+    }
+
     private async Task<bool> CheckVirtualGameCardsAuthentication(HttpClient httpClient, VgcQueryParams queryParams)
     {
-      if (queryParams == null || string.IsNullOrEmpty(queryParams.idToken) ||
-          string.IsNullOrEmpty(queryParams.savannaClientId) || string.IsNullOrEmpty(queryParams.shopGraphQLApiUrl))
+      if (!HasVirtualGameCardsQueryParams(queryParams))
       {
         return false;
       }
@@ -442,13 +484,7 @@ namespace NintendoLibrary.Services
         using (var httpClient = new HttpClient(handler))
         {
           httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
-          var strResponse = await httpClient.GetStringAsync(vgcMainPageUrl);
-          var match = Regex.Match(strResponse, @"<div id=""data"" data-json=""(.*?)""");
-          if (!match.Success)
-          {
-            return false;
-          }
-          var queryParams = Serialization.FromJson<VgcQueryParams>(HttpUtility.HtmlDecode(match.Groups[1].Value));
+          var queryParams = await GetVirtualGameCardsQueryParams(httpClient);
           return await CheckVirtualGameCardsAuthentication(httpClient, queryParams);
         }
       }
