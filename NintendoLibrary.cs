@@ -53,11 +53,13 @@ namespace NintendoLibrary
       var parsedGames = new List<GameMetadata>();
       foreach (var title in gamesToParse)
       {
+        var iconUrl = title.icon?.upgradedIconUrl ?? title.icon?.url;
         parsedGames.Add(new GameMetadata
         {
           GameId = title.applicationId,
           Name = FixGameName(title.applicationName),
           Platforms = GetPlatforms(title).ToHashSet(),
+          Icon = string.IsNullOrEmpty(iconUrl) ? null : new MetadataFile(iconUrl),
         });
       }
 

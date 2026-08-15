@@ -73,9 +73,12 @@ namespace NintendoLibrary.Models
       public bool hasNxAddOnContents { get; set; }
       public bool hasOunceApplication { get; set; }
       public bool hasOunceAddOnContents { get; set; }
+      public Icon icon { get; set; }
+
       public class Icon
       {
         public string url { get; set; }
+        public string upgradedIconUrl { get; set; }
         public int[] sizes { get; set; }
       }
     }
