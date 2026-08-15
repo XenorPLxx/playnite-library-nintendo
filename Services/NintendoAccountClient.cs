@@ -35,6 +35,8 @@ namespace NintendoLibrary.Services
     private readonly string cookiesPath;
     private readonly string legacyTokenPath;
     private const int vgcPageRequestLimit = 300;
+    // Nintendo's portal uses this fixed shop context for virtual game cards.
+    private const int vgcOffDeviceShopId = 3;
     private const string vgcMainPageUrl = "https://accounts.nintendo.com/portal/vgcs/?sort=activated_date&order=desc";
     private const string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
 
@@ -370,13 +372,20 @@ namespace NintendoLibrary.Services
         response.EnsureSuccessStatusCode();
         portalResponse = await response.Content.ReadAsStringAsync();
       }
-      var match = Regex.Match(portalResponse, @"<div id=""data"" data-json=""(.*?)""");
-      if (!match.Success)
+      var queryParams = GetPortalData<VgcQueryParams>(portalResponse, "data");
+      var portalMeta = GetPortalData<VgcPortalMeta>(portalResponse, "meta");
+      var portalState = GetPortalData<VgcPortalState>(portalResponse, "state");
+      var country = portalMeta?.countries?.FirstOrDefault(a => a.id == portalState?.user?.countryId);
+
+      if (!HasVirtualGameCardsBaseQueryParams(queryParams) || country == null || string.IsNullOrWhiteSpace(country.code) || string.IsNullOrWhiteSpace(portalState?.lang) || portalState.lang.Length < 2)
       {
-        throw new Exception("Nintendo Account portal did not return Virtual Game Cards query parameters.");
+        throw new Exception("Nintendo Account portal returned incomplete Virtual Game Cards locale information.");
       }
 
-      var queryParams = Serialization.FromJson<VgcQueryParams>(HttpUtility.HtmlDecode(match.Groups[1].Value));
+      queryParams.countryCode = country.code;
+      queryParams.languageCode = portalState.lang.Substring(0, 2);
+      queryParams.nasLanguage = portalState.lang;
+      queryParams.shopId = vgcOffDeviceShopId;
       if (!HasVirtualGameCardsQueryParams(queryParams))
       {
         throw new Exception("Nintendo Account portal returned incomplete Virtual Game Cards query parameters.");
@@ -385,7 +394,20 @@ namespace NintendoLibrary.Services
       return queryParams;
     }
 
+    private static T GetPortalData<T>(string portalResponse, string elementId) where T : class
+    {
+      var match = Regex.Match(portalResponse, $@"<div id=""{elementId}"" data-json=""(.*?)""");
+      return match.Success ? Serialization.FromJson<T>(HttpUtility.HtmlDecode(match.Groups[1].Value)) : null;
+    }
+
     private static bool HasVirtualGameCardsQueryParams(VgcQueryParams queryParams)
+    {
+      return HasVirtualGameCardsBaseQueryParams(queryParams) &&
+             !string.IsNullOrEmpty(queryParams.countryCode) && !string.IsNullOrEmpty(queryParams.languageCode) &&
+             !string.IsNullOrEmpty(queryParams.nasLanguage) && queryParams.shopId > 0;
+    }
+
+    private static bool HasVirtualGameCardsBaseQueryParams(VgcQueryParams queryParams)
     {
       return queryParams != null && !string.IsNullOrEmpty(queryParams.idToken) &&
              !string.IsNullOrEmpty(queryParams.savannaClientId) && !string.IsNullOrEmpty(queryParams.shopGraphQLApiUrl);
@@ -458,14 +480,14 @@ namespace NintendoLibrary.Services
                 }",
         variables = new
         {
-          country = "GB",
+          country = queryParams.countryCode,
           idToken = queryParams.idToken,
-          language = "en",
+          language = queryParams.languageCode,
           limit = vgcPageRequestLimit,
-          nasLanguage = "en-GB",
+          nasLanguage = queryParams.nasLanguage,
           offset,
           order = "ASC",
-          shopId = 3,
+          shopId = queryParams.shopId,
           sortBy = "ACTIVATED_DATE"
         }
       };

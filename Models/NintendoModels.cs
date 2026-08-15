@@ -38,6 +38,8 @@ namespace NintendoLibrary.Models
       public string applicationId { get; set; }
       public string applicationName { get; set; }
       public string apparentPlatform { get; set; }
+      public bool hasApplication { get; set; }
+      public bool hasAddOnContents { get; set; }
       public bool hasNxApplication { get; set; }
       public bool hasNxAddOnContents { get; set; }
       public bool hasOunceApplication { get; set; }
@@ -63,6 +65,32 @@ namespace NintendoLibrary.Models
     public string savannaClientId { get; set; }
     public string myNintendoAccessToken { get; set; }
     public string shopGraphQLApiUrl { get; set; }
+    public string countryCode { get; set; }
+    public string languageCode { get; set; }
+    public string nasLanguage { get; set; }
+    public int shopId { get; set; }
+  }
+
+  public class VgcPortalMeta
+  {
+    public List<VgcCountry> countries { get; set; }
+  }
+
+  public class VgcPortalState
+  {
+    public VgcPortalUser user { get; set; }
+    public string lang { get; set; }
+  }
+
+  public class VgcPortalUser
+  {
+    public int countryId { get; set; }
+  }
+
+  public class VgcCountry
+  {
+    public int id { get; set; }
+    public string code { get; set; }
 
   }
 }

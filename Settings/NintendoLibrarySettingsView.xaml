@@ -20,6 +20,10 @@
                   IsChecked="{Binding Settings.ConnectAccount}"
                   Content="{DynamicResource LOCSettingsConnectAccount}"/>
 
+    <CheckBox IsChecked="{Binding Settings.ExcludeAddOnOnlyEntries}"
+              Content="Exclude add-on-only entries (DLC)"
+              Margin="0,8,0,0"/>
+
     <StackPanel DockPanel.Dock="Top" Margin="40,5,0,0"
                     IsEnabled="{Binding IsChecked, ElementName=CheckNintendoConnectAccount}">
 

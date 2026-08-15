@@ -48,11 +48,21 @@ namespace NintendoLibrary
       return Regex.Replace(gameName, @"\s+", " ");
     }
 
+    private static bool IsAddOnOnly(VirtualGameCardsList.View game)
+    {
+      return !game.hasApplication && game.hasAddOnContents;
+    }
+
     private List<GameMetadata> parseVirtualGameCards(List<VirtualGameCardsList.View> gamesToParse)
     {
       var parsedGames = new List<GameMetadata>();
       foreach (var title in gamesToParse)
       {
+        if (SettingsViewModel.Settings.ExcludeAddOnOnlyEntries && IsAddOnOnly(title))
+        {
+          continue;
+        }
+
         var iconUrl = title.icon?.upgradedIconUrl ?? title.icon?.url;
         parsedGames.Add(new GameMetadata
         {

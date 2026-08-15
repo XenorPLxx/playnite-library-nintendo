@@ -12,6 +12,7 @@ namespace NintendoLibrary
   public class NintendoLibrarySettings
   {
     public bool ConnectAccount { get; set; } = true;
+    public bool ExcludeAddOnOnlyEntries { get; set; } = false;
   }
 
   public class NintendoLibrarySettingsViewModel : PluginSettingsViewModel<NintendoLibrarySettings, NintendoLibrary>
