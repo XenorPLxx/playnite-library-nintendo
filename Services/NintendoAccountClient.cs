@@ -37,10 +37,21 @@ namespace NintendoLibrary.Services
   public class NintendoAccountClient
   {
     private static readonly ILogger logger = LogManager.GetLogger();
+    private static readonly Uri[] cookieUris =
+    {
+      new Uri("https://ec.nintendo.com"),
+      new Uri("https://accounts.nintendo.com"),
+      new Uri("https://api.accounts.nintendo.com"),
+      new Uri("https://api.ec.nintendo.com"),
+      new Uri("https://apps.accounts.nintendo.com")
+    };
+    private static readonly byte[] cookieEncryptionEntropy = Encoding.UTF8.GetBytes("NintendoLibrary.CookieStore.v1");
+
     private IPlayniteAPI api;
     //private MobileTokens mobileToken;
     private readonly NintendoLibrary library;
-    private readonly string tokenPath;
+    private readonly string cookiesPath;
+    private readonly string legacyTokenPath;
     private const int pageRequestLimit = 100;
     private const int vgcPageRequestLimit = 300;
     private const string purchasesListUrl = "https://ec.nintendo.com/api/my/transactions?offset={1}&limit={0}";
@@ -51,7 +62,8 @@ namespace NintendoLibrary.Services
     {
       this.library = library;
       this.api = api;
-      tokenPath = Path.Combine(library.GetPluginUserDataPath(), "token.json");
+      cookiesPath = Path.Combine(library.GetPluginUserDataPath(), "cookies.dat");
+      legacyTokenPath = Path.Combine(library.GetPluginUserDataPath(), "token.json");
     }
 
     public void Login()
@@ -141,54 +153,192 @@ namespace NintendoLibrary.Services
         }
       }
 
-      WriteCookiesToDisk(cookieContainer);
+      if (WriteCookiesToDisk(cookieContainer) && File.Exists(legacyTokenPath))
+      {
+        File.Delete(legacyTokenPath);
+      }
 
       view.Dispose();
       return cookies;
     }
 
-    private void WriteCookiesToDisk(CookieContainer cookieJar)
+    private bool WriteCookiesToDisk(CookieContainer cookieJar)
     {
-      File.Delete(tokenPath);
-      using (Stream stream = File.Create(tokenPath))
+      var temporaryCookiesPath = cookiesPath + ".tmp";
+      try
       {
-        try
+        Directory.CreateDirectory(Path.GetDirectoryName(cookiesPath));
+        var storedCookies = GetStoredCookies(cookieJar);
+        var encryptedCookies = ProtectedData.Protect(
+          Encoding.UTF8.GetBytes(Serialization.ToJson(storedCookies)),
+          cookieEncryptionEntropy,
+          DataProtectionScope.CurrentUser);
+        File.WriteAllBytes(temporaryCookiesPath, encryptedCookies);
+        File.Copy(temporaryCookiesPath, cookiesPath, true);
+        return true;
+      }
+      catch (Exception e)
+      {
+        logger.Error(e, "Failed to save Nintendo authentication cookies.");
+        return false;
+      }
+      finally
+      {
+        if (File.Exists(temporaryCookiesPath))
         {
-          Console.Out.Write("Writing cookies to disk... ");
-          BinaryFormatter formatter = new BinaryFormatter();
-          formatter.Serialize(stream, cookieJar);
-          Console.Out.WriteLine("Done.");
-        }
-        catch (Exception e)
-        {
-          Console.Out.WriteLine("Problem writing cookies to disk: " + e.GetType());
+          File.Delete(temporaryCookiesPath);
         }
       }
     }
 
     private CookieContainer ReadCookiesFromDisk()
     {
+      if (File.Exists(cookiesPath))
+      {
+        try
+        {
+          var decryptedCookies = ProtectedData.Unprotect(
+            File.ReadAllBytes(cookiesPath),
+            cookieEncryptionEntropy,
+            DataProtectionScope.CurrentUser);
+          var storedCookies = Serialization.FromJson<List<StoredCookie>>(Encoding.UTF8.GetString(decryptedCookies));
+          return CreateCookieContainer(storedCookies);
+        }
+        catch (Exception e)
+        {
+          logger.Error(e, "Failed to load saved Nintendo authentication cookies.");
+        }
+      }
+
+      var legacyCookies = ReadLegacyCookiesFromDisk();
+      if (legacyCookies != null)
+      {
+        if (WriteCookiesToDisk(legacyCookies))
+        {
+          File.Delete(legacyTokenPath);
+        }
+
+        return legacyCookies;
+      }
+
+      return new CookieContainer();
+    }
+
+    private CookieContainer ReadLegacyCookiesFromDisk()
+    {
+      if (!File.Exists(legacyTokenPath))
+      {
+        return null;
+      }
+
       try
       {
-        using (Stream stream = File.Open(tokenPath, FileMode.Open))
+        using (var stream = File.Open(legacyTokenPath, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-          Console.Out.Write("Reading cookies from disk... ");
-          BinaryFormatter formatter = new BinaryFormatter();
-          Console.Out.WriteLine("Done.");
-          return (CookieContainer)formatter.Deserialize(stream);
+          var formatter = new BinaryFormatter();
+          return formatter.Deserialize(stream) as CookieContainer;
         }
       }
       catch (Exception e)
       {
-        Console.Out.WriteLine("Problem reading cookies from disk: " + e.GetType());
-        return new CookieContainer();
+        logger.Error(e, "Failed to import legacy Nintendo authentication cookies.");
+        return null;
       }
+    }
+
+    private static List<StoredCookie> GetStoredCookies(CookieContainer cookieJar)
+    {
+      var cookies = new List<StoredCookie>();
+      var cookieKeys = new HashSet<string>(StringComparer.Ordinal);
+
+      foreach (var uri in cookieUris)
+      {
+        foreach (Cookie cookie in cookieJar.GetCookies(uri))
+        {
+          var key = string.Join("\n", cookie.Domain, cookie.Path, cookie.Name);
+          if (!cookieKeys.Add(key))
+          {
+            continue;
+          }
+
+          cookies.Add(new StoredCookie
+          {
+            Domain = cookie.Domain,
+            Path = cookie.Path,
+            Name = cookie.Name,
+            Value = cookie.Value,
+            Expires = cookie.Expires == DateTime.MinValue ? null : (DateTime?)cookie.Expires,
+            Secure = cookie.Secure,
+            HttpOnly = cookie.HttpOnly
+          });
+        }
+      }
+
+      return cookies;
+    }
+
+    private static CookieContainer CreateCookieContainer(IEnumerable<StoredCookie> storedCookies)
+    {
+      var cookieContainer = new CookieContainer();
+      if (storedCookies == null)
+      {
+        return cookieContainer;
+      }
+
+      foreach (var storedCookie in storedCookies)
+      {
+        if (string.IsNullOrEmpty(storedCookie?.Name) || string.IsNullOrEmpty(storedCookie.Domain))
+        {
+          continue;
+        }
+
+        try
+        {
+          var cookie = new Cookie(
+            storedCookie.Name,
+            storedCookie.Value ?? string.Empty,
+            string.IsNullOrEmpty(storedCookie.Path) ? "/" : storedCookie.Path,
+            storedCookie.Domain)
+          {
+            Secure = storedCookie.Secure,
+            HttpOnly = storedCookie.HttpOnly
+          };
+          if (storedCookie.Expires.HasValue)
+          {
+            cookie.Expires = storedCookie.Expires.Value;
+          }
+
+          cookieContainer.Add(cookie);
+        }
+        catch (CookieException e)
+        {
+          logger.Warn(e, "Skipping an invalid saved Nintendo authentication cookie.");
+        }
+      }
+
+      return cookieContainer;
+    }
+
+    private bool HasSavedCookies()
+    {
+      return File.Exists(cookiesPath) || File.Exists(legacyTokenPath);
+    }
+
+    private class StoredCookie
+    {
+      public string Domain { get; set; }
+      public string Path { get; set; }
+      public string Name { get; set; }
+      public string Value { get; set; }
+      public DateTime? Expires { get; set; }
+      public bool Secure { get; set; }
+      public bool HttpOnly { get; set; }
     }
 
     public async Task CheckAuthentication(CancellationToken cancellationToken = default(CancellationToken))
     {
       cancellationToken.ThrowIfCancellationRequested();
-      if (!File.Exists(tokenPath))
+      if (!HasSavedCookies())
       {
         throw new Exception("User is not authenticated.");
       }
@@ -481,7 +631,7 @@ namespace NintendoLibrary.Services
     }
     public async Task<bool> GetIsUserLoggedIn(CancellationToken cancellationToken = default(CancellationToken))
     {
-      if (!File.Exists(tokenPath))
+      if (!HasSavedCookies())
       {
         return false;
       }
