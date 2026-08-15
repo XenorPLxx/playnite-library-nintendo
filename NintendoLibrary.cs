@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace NintendoLibrary
 {
@@ -63,9 +64,9 @@ namespace NintendoLibrary
       return parsedGames;
     }
 
-    private List<GameMetadata> ParseVirtualGameCardsList(NintendoAccountClient clientApi)
+    private List<GameMetadata> ParseVirtualGameCardsList(NintendoAccountClient clientApi, CancellationToken cancellationToken)
     {
-      var gamesToParse = clientApi.GetVirtualGameCardsList().GetAwaiter().GetResult();
+      var gamesToParse = clientApi.GetVirtualGameCardsList(cancellationToken).GetAwaiter().GetResult();
       return parseVirtualGameCards(gamesToParse);
     }
 
@@ -83,7 +84,7 @@ namespace NintendoLibrary
       {
         var clientApi = new NintendoAccountClient(this, PlayniteApi);
         var allGames = new List<GameMetadata>();
-        allGames.AddRange(ParseVirtualGameCardsList(clientApi));
+        allGames.AddRange(ParseVirtualGameCardsList(clientApi, args.CancelToken));
 
         if (args.CancelToken.IsCancellationRequested)
         {
@@ -92,10 +93,19 @@ namespace NintendoLibrary
 
         foreach (var group in allGames.GroupBy(a => a.GameId))
         {
+          if (args.CancelToken.IsCancellationRequested)
+          {
+            return games;
+          }
+
           var game = group.First();
           game.Source = new MetadataNameProperty("Nintendo");
           games.Add(game);
         }
+      }
+      catch (OperationCanceledException) when (args.CancelToken.IsCancellationRequested)
+      {
+        return games;
       }
       catch (Exception e) when (!Debugger.IsAttached)
       {

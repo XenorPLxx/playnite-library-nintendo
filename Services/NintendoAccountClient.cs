@@ -185,18 +185,20 @@ namespace NintendoLibrary.Services
       }
     }
 
-    public async Task CheckAuthentication()
+    public async Task CheckAuthentication(CancellationToken cancellationToken = default(CancellationToken))
     {
+      cancellationToken.ThrowIfCancellationRequested();
       if (!File.Exists(tokenPath))
       {
         throw new Exception("User is not authenticated.");
       }
       else
       {
-        if (!await GetIsUserLoggedIn())
+        if (!await GetIsUserLoggedIn(cancellationToken))
         {
+          cancellationToken.ThrowIfCancellationRequested();
           TryRefreshCookies();
-          if (!await GetIsUserLoggedIn())
+          if (!await GetIsUserLoggedIn(cancellationToken))
           {
             throw new Exception("User is not authenticated.");
           }
@@ -232,9 +234,9 @@ namespace NintendoLibrary.Services
       return titles;
     }
 
-    public async Task<List<VirtualGameCardsList.View>> GetVirtualGameCardsList()
+    public async Task<List<VirtualGameCardsList.View>> GetVirtualGameCardsList(CancellationToken cancellationToken = default(CancellationToken))
     {
-      await CheckAuthentication();
+      await CheckAuthentication(cancellationToken);
 
       var titles = new List<VirtualGameCardsList.View>();
 
@@ -245,11 +247,12 @@ namespace NintendoLibrary.Services
         httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
         var itemCount = 0;
         var currentOffset = 0;
-        var queryParamsObject = await GetVirtualGameCardsQueryParams(httpClient);
+        var queryParamsObject = await GetVirtualGameCardsQueryParams(httpClient, cancellationToken);
 
         do
         {
-          var titles_part = await GetVirtualGameCardsPage(httpClient, queryParamsObject, currentOffset);
+          cancellationToken.ThrowIfCancellationRequested();
+          var titles_part = await GetVirtualGameCardsPage(httpClient, queryParamsObject, currentOffset, cancellationToken);
           titles.AddRange(titles_part.data.account.vgc.vgcViews.views);
           currentOffset += vgcPageRequestLimit;
           itemCount = titles_part.data.account.vgc.vgcViews.offsetInfo.total;
@@ -258,9 +261,14 @@ namespace NintendoLibrary.Services
       return titles;
     }
 
-    private async Task<VgcQueryParams> GetVirtualGameCardsQueryParams(HttpClient httpClient)
+    private async Task<VgcQueryParams> GetVirtualGameCardsQueryParams(HttpClient httpClient, CancellationToken cancellationToken)
     {
-      var portalResponse = await httpClient.GetStringAsync(vgcMainPageUrl);
+      string portalResponse;
+      using (var response = await httpClient.GetAsync(vgcMainPageUrl, cancellationToken))
+      {
+        response.EnsureSuccessStatusCode();
+        portalResponse = await response.Content.ReadAsStringAsync();
+      }
       var match = Regex.Match(portalResponse, @"<div id=""data"" data-json=""(.*?)""");
       if (!match.Success)
       {
@@ -282,7 +290,7 @@ namespace NintendoLibrary.Services
              !string.IsNullOrEmpty(queryParams.savannaClientId) && !string.IsNullOrEmpty(queryParams.shopGraphQLApiUrl);
     }
 
-    private async Task<Vgc> GetVirtualGameCardsPage(HttpClient httpClient, VgcQueryParams queryParams, int offset)
+    private async Task<Vgc> GetVirtualGameCardsPage(HttpClient httpClient, VgcQueryParams queryParams, int offset, CancellationToken cancellationToken)
     {
       var queryObject = new
       {
@@ -366,7 +374,7 @@ namespace NintendoLibrary.Services
         request.Content = new StringContent(Serialization.ToJson(queryObject), Encoding.UTF8, "application/json");
         request.Headers.Add("x-nintendo-savanna-client-id", queryParams.savannaClientId);
 
-        using (var response = await httpClient.SendAsync(request))
+        using (var response = await httpClient.SendAsync(request, cancellationToken))
         {
           if (!response.IsSuccessStatusCode)
           {
@@ -389,7 +397,7 @@ namespace NintendoLibrary.Services
       }
     }
 
-    private async Task<bool> CheckVirtualGameCardsAuthentication(HttpClient httpClient, VgcQueryParams queryParams)
+    private async Task<bool> CheckVirtualGameCardsAuthentication(HttpClient httpClient, VgcQueryParams queryParams, CancellationToken cancellationToken)
     {
       if (!HasVirtualGameCardsQueryParams(queryParams))
       {
@@ -450,7 +458,7 @@ namespace NintendoLibrary.Services
         request.Content = new StringContent(Serialization.ToJson(queryObject), Encoding.UTF8, "application/json");
         request.Headers.Add("x-nintendo-savanna-client-id", queryParams.savannaClientId);
 
-        using (var response = await httpClient.SendAsync(request))
+        using (var response = await httpClient.SendAsync(request, cancellationToken))
         {
           if (!response.IsSuccessStatusCode)
           {
@@ -471,7 +479,7 @@ namespace NintendoLibrary.Services
       }
       dumpCookies();
     }
-    public async Task<bool> GetIsUserLoggedIn()
+    public async Task<bool> GetIsUserLoggedIn(CancellationToken cancellationToken = default(CancellationToken))
     {
       if (!File.Exists(tokenPath))
       {
@@ -484,9 +492,13 @@ namespace NintendoLibrary.Services
         using (var httpClient = new HttpClient(handler))
         {
           httpClient.DefaultRequestHeaders.UserAgent.ParseAdd(userAgent);
-          var queryParams = await GetVirtualGameCardsQueryParams(httpClient);
-          return await CheckVirtualGameCardsAuthentication(httpClient, queryParams);
+          var queryParams = await GetVirtualGameCardsQueryParams(httpClient, cancellationToken);
+          return await CheckVirtualGameCardsAuthentication(httpClient, queryParams, cancellationToken);
         }
+      }
+      catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+      {
+        throw;
       }
       catch (Exception e) when (!Debugger.IsAttached)
       {
