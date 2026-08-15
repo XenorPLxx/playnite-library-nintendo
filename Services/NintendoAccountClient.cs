@@ -345,6 +345,82 @@ namespace NintendoLibrary.Services
       }
       return titles;
     }
+
+    private async Task<bool> CheckVirtualGameCardsAuthentication(HttpClient httpClient, VgcQueryParams queryParams)
+    {
+      if (queryParams == null || string.IsNullOrEmpty(queryParams.idToken) ||
+          string.IsNullOrEmpty(queryParams.savannaClientId) || string.IsNullOrEmpty(queryParams.shopGraphQLApiUrl))
+      {
+        return false;
+      }
+
+      var queryObject = new
+      {
+        query = @"query checkVgcs(
+                    $idToken: String!
+                    $country: CountryCode!
+                    $language: LanguageCode!
+                    $shopId: Int!
+                    $limit: Int!
+                    $nasLanguage: String!
+                    $offset: Int!
+                    $order: RequestableVgcViewOrder!
+                    $sortBy: RequestableVgcViewSortBy!
+                    $vgcViewType: VgcViewTypeInput
+                    $vgcViewStatus: VgcViewStatusInput
+                  ) @inContext(country: $country, language: $language, shopId: $shopId) {
+                    account {
+                      vgc {
+                        vgcViews(
+                          idToken: $idToken,
+                          limit: $limit,
+                          nasLanguage: $nasLanguage,
+                          offset: $offset,
+                          order: $order,
+                          sortBy: $sortBy,
+                          isHidden: false,
+                          vgcViewType: $vgcViewType,
+                          vgcViewStatus: $vgcViewStatus,
+                        ) {
+                          offsetInfo {
+                            total
+                          }
+                        }
+                      }
+                    }
+                  }",
+        variables = new
+        {
+          country = "GB",
+          idToken = queryParams.idToken,
+          language = "en",
+          limit = 1,
+          nasLanguage = "en-GB",
+          offset = 0,
+          order = "ASC",
+          shopId = 3,
+          sortBy = "ACTIVATED_DATE"
+        }
+      };
+
+      using (var request = new HttpRequestMessage(HttpMethod.Post, queryParams.shopGraphQLApiUrl))
+      {
+        request.Content = new StringContent(Serialization.ToJson(queryObject), Encoding.UTF8, "application/json");
+        request.Headers.Add("x-nintendo-savanna-client-id", queryParams.savannaClientId);
+
+        using (var response = await httpClient.SendAsync(request))
+        {
+          if (!response.IsSuccessStatusCode)
+          {
+            return false;
+          }
+
+          var vgc = Serialization.FromJson<Vgc>(await response.Content.ReadAsStringAsync());
+          return vgc?.data?.account?.vgc?.vgcViews?.offsetInfo != null;
+        }
+      }
+    }
+
     private void TryRefreshCookies()
     {
       using (var webView = api.WebViews.CreateOffscreenView())
@@ -373,7 +449,7 @@ namespace NintendoLibrary.Services
             return false;
           }
           var queryParams = Serialization.FromJson<VgcQueryParams>(HttpUtility.HtmlDecode(match.Groups[1].Value));
-          return !string.IsNullOrEmpty(queryParams?.idToken);
+          return await CheckVirtualGameCardsAuthentication(httpClient, queryParams);
         }
       }
       catch (Exception e) when (!Debugger.IsAttached)
