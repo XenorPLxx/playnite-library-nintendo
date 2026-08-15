@@ -147,7 +147,6 @@
     <Compile Include="Common\PluginBase.cs" />
     <Compile Include="Common\PluginSettingsViewModel.cs" />
     <Compile Include="Models\NintendoModels.cs" />
-    <Compile Include="NintendoGameController.cs" />
     <Compile Include="NintendoLibrary.cs" />
     <Compile Include="Settings\NintendoLibrarySettingsViewModel.cs" />
     <Compile Include="Settings\NintendoLibrarySettingsView.xaml.cs">

@@ -1,7 +1,6 @@
-﻿using Playnite.Common;
+using NintendoLibrary.Models;
 using Playnite.SDK;
 using Playnite.SDK.Data;
-using NintendoLibrary.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,28 +11,13 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Security.Principal;
 using System.Web;
 using System.Net;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Net.Http.Headers;
-using System.Security;
-using System.Web.UI.WebControls;
-using System.Collections;
-using System.Globalization;
-using System.Net.Mime;
-using System.Runtime.Remoting.Messaging;
-using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Security.Cryptography;
-using System.Windows;
 
 namespace NintendoLibrary.Services
 {
-  public class ApiRedirectResponse
-  {
-    public string redirectUrl { get; set; }
-    public string sid { get; set; }
-  }
   public class NintendoAccountClient
   {
     private static readonly ILogger logger = LogManager.GetLogger();
@@ -47,20 +31,15 @@ namespace NintendoLibrary.Services
     };
     private static readonly byte[] cookieEncryptionEntropy = Encoding.UTF8.GetBytes("NintendoLibrary.CookieStore.v1");
 
-    private IPlayniteAPI api;
-    //private MobileTokens mobileToken;
-    private readonly NintendoLibrary library;
+    private readonly IPlayniteAPI api;
     private readonly string cookiesPath;
     private readonly string legacyTokenPath;
-    private const int pageRequestLimit = 100;
     private const int vgcPageRequestLimit = 300;
-    private const string purchasesListUrl = "https://ec.nintendo.com/api/my/transactions?offset={1}&limit={0}";
     private const string vgcMainPageUrl = "https://accounts.nintendo.com/portal/vgcs/?sort=activated_date&order=desc";
     private const string userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
 
     public NintendoAccountClient(NintendoLibrary library, IPlayniteAPI api)
     {
-      this.library = library;
       this.api = api;
       cookiesPath = Path.Combine(library.GetPluginUserDataPath(), "cookies.dat");
       legacyTokenPath = Path.Combine(library.GetPluginUserDataPath(), "token.json");
@@ -354,34 +333,6 @@ namespace NintendoLibrary.Services
           }
         }
       }
-    }
-
-    public async Task<List<PurchasedList.Transaction>> GetPurchasedList()
-    {
-      await CheckAuthentication();
-
-      var titles = new List<PurchasedList.Transaction>();
-
-      var cookieContainer = ReadCookiesFromDisk();
-      using (var handler = new HttpClientHandler() { CookieContainer = cookieContainer })
-      using (var httpClient = new HttpClient(handler))
-      {
-        var itemCount = 0;
-        var offset = -pageRequestLimit;
-
-        do
-        {
-          object[] args = { offset, pageRequestLimit };
-          var resp = await httpClient.GetAsync(purchasesListUrl.Format(pageRequestLimit, offset + pageRequestLimit));
-          var strResponse = await resp.Content.ReadAsStringAsync();
-          var titles_part = Serialization.FromJson<PurchasedList>(strResponse);
-          titles.AddRange(titles_part.transactions);
-          offset = titles_part.offset;
-          itemCount = titles_part.total;
-        } while (offset + pageRequestLimit < itemCount);
-      }
-
-      return titles;
     }
 
     public async Task<List<VirtualGameCardsList.View>> GetVirtualGameCardsList(CancellationToken cancellationToken = default(CancellationToken))
