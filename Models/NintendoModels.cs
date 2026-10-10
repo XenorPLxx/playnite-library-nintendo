@@ -10,6 +10,12 @@ namespace NintendoLibrary.Models
     public class Error
     {
       public string message { get; set; }
+      public Extensions extensions { get; set; }
+
+      public class Extensions
+      {
+        public string code { get; set; }
+      }
     }
 
     public class vgcData

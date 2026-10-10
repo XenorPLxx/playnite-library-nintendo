@@ -127,12 +127,13 @@ namespace NintendoLibrary
 
       if (importError != null)
       {
+        var errorCaption = string.Format(PlayniteApi.Resources.GetString("LOCLibraryImportError"), Name);
+        var errorDetails = importError.Message;
         PlayniteApi.Notifications.Add(new NotificationMessage(
             ImportErrorMessageId,
-            string.Format(PlayniteApi.Resources.GetString("LOCLibraryImportError"), Name) +
-            System.Environment.NewLine + importError.Message,
+            errorCaption + System.Environment.NewLine + errorDetails,
             NotificationType.Error,
-            () => OpenSettingsView()));
+            () => PlayniteApi.Dialogs.ShowMessage(errorDetails, errorCaption)));
       }
       else
       {
