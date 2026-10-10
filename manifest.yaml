@@ -1,5 +1,13 @@
 AddonId: NintendoLibrary
 Packages:
+  - Version: 1.19
+    RequiredApiVersion: 6.12.0
+    ReleaseDate: 2026-10-10
+    PackageUrl: https://github.com/XenorPLxx/playnite-library-nintendo/releases/download/1.19/NintendoLibrary_1_19.pext
+    Changelog:
+      - Uses the account's country and language for Virtual Game Card authentication checks.
+      - Preserves Nintendo request errors after refreshing the saved session.
+      - Shows detailed Nintendo import errors in notifications and a dialog.
   - Version: 1.18
     RequiredApiVersion: 6.12.0
     ReleaseDate: 2026-08-15
