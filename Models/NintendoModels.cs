@@ -74,6 +74,7 @@ namespace NintendoLibrary.Models
     public string countryCode { get; set; }
     public string languageCode { get; set; }
     public string nasLanguage { get; set; }
+    public string portalLanguage { get; set; }
     public int shopId { get; set; }
   }
 
