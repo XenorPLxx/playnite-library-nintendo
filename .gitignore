@@ -9,3 +9,6 @@ source/
 
 # Local debug profile with machine-specific paths
 Properties/launchSettings.json
+
+# Playnite 10 submodule retained when switching branches
+PlayniteRepo/

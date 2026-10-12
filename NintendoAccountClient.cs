@@ -10,7 +10,7 @@ namespace NintendoLibrary;
 
 public sealed class NintendoAccountClient
 {
-    private static readonly ILogger logger = LogManager.GetLogger();
+    private static readonly ILogger logger = LogManager.GetLogger<NintendoAccountClient>();
 
     private const string VirtualGameCardsUrl = "https://accounts.nintendo.com/portal/vgcs/?sort=activated_date&order=desc";
     private const string UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36";
@@ -18,11 +18,25 @@ public sealed class NintendoAccountClient
     private const int OffDeviceShopId = 3;
     private static readonly JsonSerializerOptions jsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    private readonly IPlayniteApi playniteApi;
+    private const string NintendoCommonScriptUrl = "https://cdn.accounts.nintendo.com/account/js/common.js";
+    private static readonly HttpClient nintendoScriptHttpClient = new(new HttpClientHandler { UseCookies = false });
+    private static readonly SemaphoreSlim nasLanguageMappingLock = new(1, 1);
+    private static Dictionary<string, string>? cachedNasLanguageMappings;
+    private static DateTime nasLanguageMappingsExpireAt;
 
-    public NintendoAccountClient(IPlayniteApi playniteApi)
+    private readonly NintendoLibraryPlugin plugin;
+    private readonly IPlayniteApi playniteApi;
+    private readonly HttpClient scriptHttpClient;
+
+    public NintendoAccountClient(NintendoLibraryPlugin plugin) : this(plugin, nintendoScriptHttpClient)
     {
-        this.playniteApi = playniteApi;
+    }
+
+    internal NintendoAccountClient(NintendoLibraryPlugin plugin, HttpClient scriptHttpClient)
+    {
+        this.plugin = plugin;
+        playniteApi = plugin.PlayniteApi;
+        this.scriptHttpClient = scriptHttpClient;
     }
 
     public async Task LoginAsync()
@@ -150,7 +164,8 @@ public sealed class NintendoAccountClient
         do
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var page = await GetVirtualGameCardsPageAsync(client, queryParameters, offset, cancellationToken);
+            var limit = maxCards.HasValue ? Math.Min(PageSize, maxCards.Value - cards.Count) : PageSize;
+            var page = await GetVirtualGameCardsPageAsync(client, queryParameters, offset, cancellationToken, limit);
             var views = page.Data?.Account?.Vgc?.VgcViews;
             if (views?.Views == null || views.OffsetInfo == null)
             {
@@ -221,9 +236,116 @@ public sealed class NintendoAccountClient
 
         parameters.CountryCode = country.Code;
         parameters.LanguageCode = state.Lang[..2];
-        parameters.NasLanguage = state.Lang;
+        parameters.PortalLanguage = state.Lang;
+        parameters.NasLanguage = GetNasLanguage(state.Lang) ?? state.Lang;
         parameters.ShopId = OffDeviceShopId;
         return parameters;
+    }
+
+    private static string? GetNasLanguage(string portalLanguage)
+    {
+        // Matches Nintendo's portal mapping in account/js/common.js.
+        switch (portalLanguage.ToLowerInvariant())
+        {
+            case "en-us": return "en-US";
+            case "en-gb": return "en-GB";
+            case "de": case "de-de": return "de";
+            case "nl": case "nl-nl": return "nl";
+            case "ja": case "ja-jp": return "ja";
+            case "fr": case "fr-fr": return "fr";
+            case "es": case "es-es": return "es";
+            case "it": case "it-it": return "it";
+            case "pt": case "pt-pt": return "pt";
+            case "ru": case "ru-ru": return "ru";
+            case "ko": case "ko-kr": return "ko";
+            case "es-mx": return "es-419";
+            case "fr-ca": return "fr-CA";
+            case "pt-br": return "pt-BR";
+            case "zh-tw": return "zh-Hant";
+            default: return null;
+        }
+    }
+
+    private static Dictionary<string, string>? ParseNasLanguageMappings(string javascript)
+    {
+        // Read only flat locale-to-locale objects. Never execute downloaded JavaScript.
+        const string locale = @"[a-zA-Z]{2,3}(?:-[a-zA-Z0-9]{2,8}){0,3}";
+        var pair = @"[""'](?<portal>" + locale + @")[""']\s*:\s*[""'](?<nas>" + locale + @")[""']";
+        var table = @"\{\s*" + pair + @"(?:\s*,\s*" + pair + @")*\s*,?\s*\}";
+        Dictionary<string, string>? result = null;
+        foreach (Match match in Regex.Matches(javascript, table, RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1)))
+        {
+            var mapping = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var keys = match.Groups["portal"].Captures;
+            var values = match.Groups["nas"].Captures;
+            for (var i = 0; i < keys.Count; i++)
+            {
+                if (mapping.ContainsKey(keys[i].Value))
+                {
+                    mapping.Clear();
+                    break;
+                }
+                mapping.Add(keys[i].Value, values[i].Value);
+            }
+
+            // Recognize the NAS table among the bundle's many translation objects.
+            if (!mapping.TryGetValue("en-US", out var us) || us != "en-US" ||
+                !mapping.TryGetValue("en-GB", out var gb) || gb != "en-GB" ||
+                !mapping.ContainsKey("ja-JP") || !mapping.ContainsKey("de-DE"))
+            {
+                continue;
+            }
+            if (result != null && (result.Count != mapping.Count || result.Any(a => !mapping.TryGetValue(a.Key, out var value) || value != a.Value)))
+            {
+                return null;
+            }
+            result = mapping;
+        }
+        return result;
+    }
+
+    private async Task<string?> GetNasLanguageFromNintendoScript(string portalLanguage, CancellationToken cancellationToken)
+    {
+        await nasLanguageMappingLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (cachedNasLanguageMappings == null || DateTime.UtcNow >= nasLanguageMappingsExpireAt)
+            {
+                Dictionary<string, string>? mappings = null;
+                try
+                {
+                    using (var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+                    {
+                        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+                        using (var response = await scriptHttpClient.GetAsync(NintendoCommonScriptUrl, timeout.Token))
+                        {
+                            response.EnsureSuccessStatusCode();
+                            mappings = ParseNasLanguageMappings(await response.Content.ReadAsStringAsync(timeout.Token));
+                        }
+                    }
+                    if (mappings == null)
+                    {
+                        logger.Warn("Nintendo JavaScript did not contain a recognized NAS language mapping; continuing with locale fallbacks.");
+                    }
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception e)
+                {
+                    logger.Warn(e, "Could not load Nintendo's NAS language mapping; continuing with locale fallbacks.");
+                }
+                // Cache failures too, so an unavailable CDN is not queried on every check.
+                cachedNasLanguageMappings = mappings ?? new Dictionary<string, string>();
+                nasLanguageMappingsExpireAt = DateTime.UtcNow.AddHours(1);
+            }
+            return cachedNasLanguageMappings.TryGetValue(portalLanguage, out var nasLanguage) ? nasLanguage : null;
+        }
+        finally
+        {
+            nasLanguageMappingLock.Release();
+        }
     }
 
     private static T? GetPortalData<T>(string source, string elementId)
@@ -234,7 +356,117 @@ public sealed class NintendoAccountClient
             : default;
     }
 
-    private static async Task<VgcResponse> GetVirtualGameCardsPageAsync(HttpClient client, VgcQueryParameters parameters, int offset, CancellationToken cancellationToken)
+    private async Task<VgcResponse> GetVirtualGameCardsPageAsync(HttpClient httpClient, VgcQueryParameters queryParams, int offset, CancellationToken cancellationToken, int limit = PageSize)
+    {
+        var settings = plugin.Settings;
+        var portalLanguage = queryParams.PortalLanguage!;
+        string? savedNasLanguage = null;
+        if (settings.NasLanguageMappings != null)
+        {
+            settings.NasLanguageMappings.TryGetValue(portalLanguage, out savedNasLanguage);
+        }
+        if (!string.IsNullOrEmpty(savedNasLanguage))
+        {
+            queryParams.NasLanguage = savedNasLanguage;
+        }
+
+        var originalNasLanguage = queryParams.NasLanguage!;
+        var checkedJavascript = false;
+        string? javascriptNasLanguage = null;
+        var firstNasLanguage = originalNasLanguage;
+        if (string.IsNullOrEmpty(savedNasLanguage) && GetNasLanguage(portalLanguage) == null)
+        {
+            javascriptNasLanguage = await GetNasLanguageFromNintendoScript(portalLanguage, cancellationToken);
+            checkedJavascript = true;
+            firstNasLanguage = javascriptNasLanguage ?? "en-GB";
+        }
+
+        var candidates = new Queue<string>();
+        candidates.Enqueue(firstNasLanguage);
+        var attempted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var queuedEnglishFallbacks = false;
+        var requestErrors = new List<string>();
+        VirtualGameCardsRequestException? lastError = null;
+        while (candidates.Count > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var nasLanguage = candidates.Dequeue();
+            if (!attempted.Add(nasLanguage))
+            {
+                continue;
+            }
+            var requestParams = new VgcQueryParameters
+            {
+                CountryCode = queryParams.CountryCode,
+                LanguageCode = queryParams.LanguageCode,
+                NasLanguage = nasLanguage,
+                ShopId = queryParams.ShopId,
+                IdToken = queryParams.IdToken,
+                SavannaClientId = queryParams.SavannaClientId,
+                ShopGraphQlApiUrl = queryParams.ShopGraphQlApiUrl
+            };
+
+            try
+            {
+                var vgc = await SendVirtualGameCardsPageAsync(httpClient, requestParams, offset, cancellationToken, limit);
+                queryParams.NasLanguage = nasLanguage;
+                if (string.Equals(nasLanguage, javascriptNasLanguage, StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.Info($"Nintendo Virtual Game Cards request succeeded using the JavaScript mapping for portalLanguage={portalLanguage}, nasLanguage={nasLanguage}.");
+                    plugin.SaveNasLanguageMapping(portalLanguage, nasLanguage);
+                }
+                else if (!string.Equals(nasLanguage, originalNasLanguage, StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.Warn($"Nintendo Virtual Game Cards request succeeded using English fallback for country={queryParams.CountryCode}, " +
+                        $"originalLanguage={originalNasLanguage}, nasLanguage={nasLanguage}.");
+                    plugin.SaveNasLanguageMapping(portalLanguage, nasLanguage);
+                }
+                return vgc;
+            }
+            catch (VirtualGameCardsRequestException e)
+            {
+                requestErrors.Add(e.Message);
+                lastError = e;
+                if (!e.CanRetryWithAnotherLocale)
+                {
+                    if (requestErrors.Count == 1)
+                    {
+                        throw;
+                    }
+                    break;
+                }
+                if (!checkedJavascript)
+                {
+                    javascriptNasLanguage = await GetNasLanguageFromNintendoScript(portalLanguage, cancellationToken);
+                    checkedJavascript = true;
+                    if (!string.IsNullOrEmpty(javascriptNasLanguage))
+                    {
+                        candidates.Enqueue(javascriptNasLanguage);
+                    }
+                }
+                if (!queuedEnglishFallbacks)
+                {
+                    candidates.Enqueue("en-GB");
+                    candidates.Enqueue("en-US");
+                    queuedEnglishFallbacks = true;
+                }
+            }
+        }
+
+        throw new Exception(string.Join(Environment.NewLine + "Locale retry also failed: ", requestErrors), lastError);
+    }
+
+    private class VirtualGameCardsRequestException : Exception
+    {
+        public bool CanRetryWithAnotherLocale { get; }
+
+        public VirtualGameCardsRequestException(string message, bool canRetryWithAnotherLocale) : base(message)
+        {
+            CanRetryWithAnotherLocale = canRetryWithAnotherLocale;
+        }
+    }
+
+    private static async Task<VgcResponse> SendVirtualGameCardsPageAsync(HttpClient client, VgcQueryParameters parameters, int offset, CancellationToken cancellationToken, int limit)
     {
         var requestBody = new
         {
@@ -244,7 +476,7 @@ public sealed class NintendoAccountClient
                 country = parameters.CountryCode,
                 idToken = parameters.IdToken,
                 language = parameters.LanguageCode,
-                limit = PageSize,
+                limit,
                 nasLanguage = parameters.NasLanguage,
                 offset,
                 order = "ASC",
@@ -259,19 +491,40 @@ public sealed class NintendoAccountClient
         };
         request.Headers.Add("x-nintendo-savanna-client-id", parameters.SavannaClientId);
         using var response = await client.SendAsync(request, cancellationToken);
+        string error;
+        var canRetryWithAnotherLocale = false;
         if (!response.IsSuccessStatusCode)
         {
-            throw new HttpRequestException(
-                $"The Nintendo virtual game card request failed with HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).");
+            error = $"HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).";
         }
-
-        var result = JsonSerializer.Deserialize<VgcResponse>(await response.Content.ReadAsStringAsync(cancellationToken), jsonOptions);
-        if (result?.Errors?.Count > 0)
+        else
         {
-            throw new InvalidOperationException("Nintendo Virtual Game Cards request failed: " + result.Errors[0].Message);
+            var result = JsonSerializer.Deserialize<VgcResponse>(await response.Content.ReadAsStringAsync(cancellationToken), jsonOptions);
+            if (result?.Errors?.Count > 0)
+            {
+                canRetryWithAnotherLocale = result.Errors.All(item => string.Equals(item.Message, "error", StringComparison.OrdinalIgnoreCase) &&
+                    string.IsNullOrEmpty(item.Extensions?.Code));
+                error = string.Join("; ", result.Errors.Select(item => string.IsNullOrEmpty(item.Extensions?.Code)
+                    ? item.Message
+                    : $"{item.Message} (code: {item.Extensions.Code})"));
+            }
+            else if (result?.Data?.Account?.Vgc?.VgcViews?.OffsetInfo == null || result.Data.Account.Vgc.VgcViews.Views == null)
+            {
+                error = "Nintendo returned an incomplete response.";
+            }
+            else
+            {
+                return result;
+            }
         }
 
-        return result ?? throw new InvalidOperationException("Nintendo Virtual Game Cards response was empty.");
+        var requestDetails = $"HTTP {(int)response.StatusCode}, " +
+            $"country={parameters.CountryCode}, language={parameters.LanguageCode}, nasLanguage={parameters.NasLanguage}, " +
+            $"shopId={parameters.ShopId}, offset={offset}, limit={limit}.";
+        var errorMessage = "Nintendo Virtual Game Cards request failed: " + error +
+            Environment.NewLine + "Request details: " + requestDetails;
+        logger.Warn(errorMessage);
+        throw new VirtualGameCardsRequestException(errorMessage, canRetryWithAnotherLocale);
     }
 
     private const string VgcQuery = """
@@ -288,19 +541,19 @@ public sealed class NintendoAccountClient
         ) @inContext(country: $country, language: $language, shopId: $shopId) {
           account {
             vgc {
-              vgcViews(idToken: $idToken, limit: $limit, nasLanguage: $nasLanguage, offset: $offset, order: $order, sortBy: $sortBy, isHidden: false) {
+              vgcViews: vgcViewsV2(idToken: $idToken, limit: $limit, language: $nasLanguage, offset: $offset, order: $order, sortBy: $sortBy, isHidden: false) {
                 offsetInfo { total offset }
                 views {
                   applicationId
                   applicationName
                   icon { url upgradedIconUrl sizes }
                   apparentPlatform
-                  hasApplication
-                  hasAddOnContents
-                  hasNxApplication
-                  hasNxAddOnContents
-                  hasOunceApplication
-                  hasOunceAddOnContents
+                  hasApplication: hasReleasedApplication
+                  hasAddOnContents: hasReleasedAddOnContents
+                  hasNxApplication: hasReleasedNxApplication
+                  hasNxAddOnContents: hasReleasedNxAddOnContents
+                  hasOunceApplication: hasReleasedOunceApplication
+                  hasOunceAddOnContents: hasReleasedOunceAddOnContents
                 }
               }
             }
@@ -374,6 +627,7 @@ public sealed class VgcQueryParameters
     public string? CountryCode { get; set; }
     public string? LanguageCode { get; set; }
     public string? NasLanguage { get; set; }
+    public string? PortalLanguage { get; set; }
     public int ShopId { get; set; }
 }
 
@@ -434,4 +688,10 @@ public sealed class VgcOffsetInfo
 public sealed class VgcError
 {
     public string? Message { get; init; }
+    public VgcErrorExtensions? Extensions { get; init; }
+}
+
+public sealed class VgcErrorExtensions
+{
+    public string? Code { get; init; }
 }

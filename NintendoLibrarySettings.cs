@@ -11,6 +11,8 @@ public partial class NintendoLibraryPluginSettings : ObservableObject
 {
     [ObservableProperty] private bool connectAccount = true;
     [ObservableProperty] private bool excludeAddOnOnlyEntries;
+    // Successful NAS mappings and English fallbacks, keyed by the full Nintendo portal locale.
+    public Dictionary<string, string> NasLanguageMappings { get; set; } = [];
 }
 
 [INotifyPropertyChanged]
@@ -18,7 +20,7 @@ public partial class NintendoLibrarySettingsHandler : PluginSettingsHandler
 {
     private const string SettingsErrorNotification = "nintendo_settings_error";
 
-    private static readonly ILogger logger = LogManager.GetLogger();
+    private static readonly ILogger logger = LogManager.GetLogger<NintendoLibrarySettingsHandler>();
 
     /// <summary>Cancels a check that a newer one has superseded.</summary>
     private CancellationTokenSource? authenticationCheck;
@@ -86,7 +88,7 @@ public partial class NintendoLibrarySettingsHandler : PluginSettingsHandler
     {
         try
         {
-            var client = new NintendoAccountClient(plugin.PlayniteApi);
+            var client = new NintendoAccountClient(plugin);
             await client.LoginAsync();
             await UpdateIsUserLoggedInAsync();
         }
@@ -109,7 +111,7 @@ public partial class NintendoLibrarySettingsHandler : PluginSettingsHandler
         IsUserLoggedIn = null;
         try
         {
-            var client = new NintendoAccountClient(plugin.PlayniteApi);
+            var client = new NintendoAccountClient(plugin);
             var loggedIn = await client.GetIsUserLoggedInAsync(cancellationToken);
             if (!cancellationToken.IsCancellationRequested)
             {
@@ -176,7 +178,8 @@ public partial class NintendoLibrarySettingsHandler : PluginSettingsHandler
         return new NintendoLibraryPluginSettings
         {
             ConnectAccount = source.ConnectAccount,
-            ExcludeAddOnOnlyEntries = source.ExcludeAddOnOnlyEntries
+            ExcludeAddOnOnlyEntries = source.ExcludeAddOnOnlyEntries,
+            NasLanguageMappings = new(source.NasLanguageMappings ?? [])
         };
     }
 }

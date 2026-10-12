@@ -4,8 +4,9 @@ namespace NintendoLibrary;
 
 public sealed class NintendoLibraryPlugin : Plugin
 {
-    private static readonly ILogger logger = LogManager.GetLogger();
+    private static readonly ILogger logger = LogManager.GetLogger<NintendoLibraryPlugin>();
     private static readonly IdImportableProperty nintendoSource = new("nintendo", "Nintendo");
+    private readonly object settingsLock = new();
 
     public const string Id = "Xenor.NintendoLibrary";
 
@@ -21,7 +22,8 @@ public sealed class NintendoLibraryPlugin : Plugin
             CanCloseOriginalClient = false,
             CanOpenOriginalClient = false,
             CanImportPlaytime = false,
-            CanImportPlaySessions = false
+            CanImportPlaySessions = false,
+            HasCustomExclusionHandling = false
         };
     }
 
@@ -42,7 +44,7 @@ public sealed class NintendoLibraryPlugin : Plugin
 
         try
         {
-            var client = new NintendoAccountClient(PlayniteApi);
+            var client = new NintendoAccountClient(this);
             var cards = await client.GetVirtualGameCardsAsync(args.CancelToken);
             var games = new List<ImportableGame>();
 
@@ -88,11 +90,13 @@ public sealed class NintendoLibraryPlugin : Plugin
         catch (Exception e)
         {
             logger.Error(e, "Failed to import Nintendo games.");
+            var errorCaption = Loc.library_import_error("Nintendo");
+            var errorDetails = e.Message;
             PlayniteApi.Notifications.Add(new NotificationMessage(
                 "nintendo_import_error",
-                Loc.library_import_error("Nintendo") + Environment.NewLine + e.Message,
+                errorCaption + Environment.NewLine + errorDetails,
                 NotificationSeverity.Error,
-                async () => await PlayniteApi.MainView.OpenPluginSettingsAsync(Id)));
+                async () => await PlayniteApi.Dialogs.ShowMessageAsync(errorDetails, errorCaption)));
             return [];
         }
     }
@@ -104,8 +108,27 @@ public sealed class NintendoLibraryPlugin : Plugin
 
     internal bool SaveSettings(NintendoLibraryPluginSettings settings)
     {
-        Settings = settings;
-        return NintendoLibrarySettingsHandler.SaveSettings(PlayniteApi.UserDataDir, settings);
+        lock (settingsLock)
+        {
+            // Authentication can learn a mapping while the settings dialog holds an older clone.
+            settings.NasLanguageMappings = new(Settings.NasLanguageMappings ?? []);
+            Settings = settings;
+            return NintendoLibrarySettingsHandler.SaveSettings(PlayniteApi.UserDataDir, settings);
+        }
+    }
+
+    internal void SaveNasLanguageMapping(string portalLanguage, string nasLanguage)
+    {
+        lock (settingsLock)
+        {
+            var mappings = new Dictionary<string, string>(Settings.NasLanguageMappings ?? [])
+            {
+                [portalLanguage] = nasLanguage
+            };
+            Settings.NasLanguageMappings = mappings;
+            // The plugin holds saved options; pending dialog edits live in a separate clone.
+            NintendoLibrarySettingsHandler.SaveSettings(PlayniteApi.UserDataDir, Settings);
+        }
     }
 
     private static List<ImportableProperty> GetPlatforms(VirtualGameCard card)
